@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNAS-Ready Fluid Art - Paraméterezett (Custom Build)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            overflow-x: hidden;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            margin: 40px auto;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 900px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 3px solid #00ccff;
+            padding-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(204, 51, 255, 0.1));
+            border-left: 4px solid #00ffff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .param-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .param-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .param-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .param-table tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e91e63;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            margin: 20px 0;
+        }
+
+        .step {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .step strong {
+            color: #4CAF50;
+            font-size: 1.1em;
+        }
+
+        ul {
+            line-height: 1.8;
+        }
+
+        .warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 4px solid #FF9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1>
+            🎨 UNAS-Ready Fluid Art Háttér
+            <span class="badge">Custom Build</span>
+        </h1>
+
+        <div class="info-box">
+            <strong>✅ Ez a verzió UNAS-ready!</strong><br><br>
+            <strong>Paraméterek:</strong>
+            <ul style="margin: 10px 0;">
+                <li><code>dissipation: 0.998</code> - Lassabb színvesztés</li>
+                <li><code>velocity: 0.999</code> - Lassabb lassulás</li>
+                <li><code>emitter_size: 2.5</code> - Nagyobb foltok</li>
+                <li><code>curl: 10</code> - Alacsonyabb örvénylés</li>
+            </ul>
+        </div>
+
+        <h2>📦 Fájlok</h2>
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Fájl</th>
+                    <th>Méret</th>
+                    <th>Leírás</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>dist/fluid-js-custom.min.js</code></td>
+                    <td>39.5 KB</td>
+                    <td>Custom build - fehér folt fix</td>
+                </tr>
+                <tr>
+                    <td><code>src/to_unas/inject_custom_fluid_parametric.js</code></td>
+                    <td>~7 KB</td>
+                    <td>UNAS injektálható kód (paraméterezett)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🚀 UNAS Telepítési Útmutató</h2>
+
+        <div class="step">
+            <strong>1. lépés: Custom Fluid-JS build publikálása</strong><br>
+            A <code>dist/fluid-js-custom.min.js</code> fájlt fel kell tölteni valahova:
+            <ul>
+                <li><strong>GitHub:</strong> Adj hozzá a repo-hoz, használj <code>jsdelivr</code> CDN-t</li>
+                <li><strong>UNAS file manager:</strong> Töltsd fel a webshop file kezelőjébe</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>2. lépés: URL módosítása</strong><br>
+            Nyisd meg: <code>src/to_unas/inject_custom_fluid_parametric.js</code><br>
+            <strong>93. sor:</strong> Cseréld le az URL-t:
+            <div class="code-block">script.src = 'https://YOUR-CDN-URL/fluid-js-custom.min.js';</div>
+        </div>
+
+        <div class="step">
+            <strong>3. lépés: Paraméterek finomhangolása (opcionális)</strong><br>
+            A fájl elején (12-70. sorok) állítsd be:
+            <ul>
+                <li><code>PHYSICS_CONFIG</code> - Fluid fizika</li>
+                <li><code>FLUID_COLORS</code> - Színpaletta</li>
+                <li><code>MOUSE_CONFIG</code> - Egér interakció</li>
+                <li><code>INITIAL_SPLATS</code> - Kezdeti foltok</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>4. lépés: UNAS-ba injektálás</strong><br>
+            1. <strong>UNAS Admin Panel → Script kezelés</strong><br>
+            2. <strong>Script típus:</strong> BODY END<br>
+            3. <strong>Másold be:</strong> A teljes <code>inject_custom_fluid_parametric.js</code> tartalmát
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ FONTOS:</strong><br>
+            - A <code>dist/fluid-js-custom.min.js</code> fájl KÖTELEZŐ (ez tartalmazza a fehér folt fixet!)<br>
+            - Ne használd a CDN verziót (<code>cdn.jsdelivr.net/npm/fluid-canvas@latest</code>) - az nem működik!<br>
+            - Csak a saját custom build-edet használd!
+        </div>
+
+        <h2>📊 Paraméterek Magyarázata</h2>
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Paraméter</th>
+                    <th>Érték</th>
+                    <th>Hatás</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>dissipation</code></td>
+                    <td>0.998</td>
+                    <td>Lassabb halványodás (magasabb = tovább marad látható)</td>
+                </tr>
+                <tr>
+                    <td><code>velocity</code></td>
+                    <td>0.999</td>
+                    <td>Lassabb lassulás (magasabb = lassabb fluid mozgás)</td>
+                </tr>
+                <tr>
+                    <td><code>emitter_size</code></td>
+                    <td>2.5</td>
+                    <td>Nagyobb foltok (0.1-3.0 tartomány)</td>
+                </tr>
+                <tr>
+                    <td><code>curl</code></td>
+                    <td>10</td>
+                    <td>Alacsonyabb örvénylés (0-50 tartomány)</td>
+                </tr>
+                <tr>
+                    <td><code>sim_resolution</code></td>
+                    <td>128</td>
+                    <td>Szimuláció felbontása (32-512)</td>
+                </tr>
+                <tr>
+                    <td><code>dye_resolution</code></td>
+                    <td>512</td>
+                    <td>Színek felbontása (128-2048)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🎨 Színpaletta</h2>
+        <div class="info-box">
+            <strong>Fluid art színek:</strong><br>
+            <div style="display: flex; gap: 20px; margin-top: 10px;">
+                <div style="background: #00ffff; padding: 20px; border-radius: 8px; color: #000;">
+                    <strong>Türkiz</strong><br>
+                    <code style="background: rgba(0,0,0,0.1);">#00ffff</code>
+                </div>
+                <div style="background: #cc33ff; padding: 20px; border-radius: 8px; color: #fff;">
+                    <strong>Lila</strong><br>
+                    <code style="background: rgba(0,0,0,0.3);">#cc33ff</code>
+                </div>
+                <div style="background: #0080ff; padding: 20px; border-radius: 8px; color: #fff;">
+                    <strong>Királykék</strong><br>
+                    <code style="background: rgba(0,0,0,0.3);">#0080ff</code>
+                </div>
+            </div>
+        </div>
+
+        <h2>✅ Teszt Checklist</h2>
+        <div class="step">
+            <ul style="list-style: none; padding-left: 0;">
+                <li>☐ Custom build elkészült (<code>dist/fluid-js-custom.min.js</code>)</li>
+                <li>☐ Build publikálva (GitHub/CDN/UNAS file manager)</li>
+                <li>☐ URL frissítve az inject scriptben</li>
+                <li>☐ Paraméterek beállítva</li>
+                <li>☐ UNAS-ba injektálva (BODY END)</li>
+                <li>☐ <strong>Piros folt NINCS</strong> (fehér folt láthatatlan)</li>
+                <li>☐ 5 színes kezdeti folt megjelenik</li>
+                <li>☐ Egér mozgásra reagál</li>
+                <li>☐ Lassú, folyékony animáció</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <strong>🔗 Hasznos linkek:</strong><br>
+            - <strong>GitHub CDN:</strong> <code>https://cdn.jsdelivr.net/gh/USERNAME/REPO@main/dist/fluid-js-custom.min.js</code><br>
+            - <strong>Fluid-JS eredeti repo:</strong> <a href="https://github.com/PavelDoGreat/WebGL-Fluid-Simulation" target="_blank">GitHub</a>
+        </div>
+    </div>
+
+    <!-- TESZT: Custom Fluid-JS betöltése -->
+    <script src="dist/fluid-js-custom.min.js"></script>
+
+    <!-- FONTOS: Az inject script-ben a relatív útvonalat át kell írni -->
+    <script>
+        // Módosítjuk az URL-t lokális teszteléshez
+        fetch('src/to_unas/inject_custom_fluid_parametric.js')
+            .then(response => response.text())
+            .then(code => {
+                // Cseréljük le az URL-t lokális teszteléshez
+                code = code.replace(
+                    "script.src = 'dist/fluid-js-custom.min.js';",
+                    "return; // Már betöltve"
+                );
+
+                // Töröljük az IIFE wrapper-t
+                code = code.replace(/^\(function\(\) \{/g, '');
+                code = code.replace(/\}\)\(\);$/g, '');
+
+                // Futtatjuk a kódot
+                eval(code);
+            })
+            .catch(error => console.error('Hiba az inject script betöltésében:', error));
+    </script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Art Study 3 - Piros folt megoldás (Monkey Patch)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: white;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderSurface"></canvas>
+    <div id="debug">
+        <div>🔧 Fluid Art Study 3 - Monkey Patch stratégia</div>
+        <div id="status">⏳ Betöltés...</div>
+    </div>
+
+    <!-- Fluid-JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fluid-canvas@latest"></script>
+
+    <script>
+        // ============================================
+        // PARAMÉTEREK
+        // ============================================
+
+        const PHYSICS_CONFIG = {
+            sim_resolution: 128,
+            dye_resolution: 512,
+            dissipation: 0.998,      // Lassabb halványodás
+            velocity: 0.999,         // Lassabb lassulás
+            pressure: 0.8,
+            pressure_iteration: 20,
+            curl: 10,                // Alacsonyabb örvénylés
+            emitter_size: 2.5,       // Nagyobb foltok
+            render_shaders: true,
+            multi_color: false,
+            render_bloom: false,
+            background_color: { r: 255, g: 255, b: 255 },
+            transparent: false
+        };
+
+        const FLUID_COLORS_RGB = [
+            { r: 0, g: 255, b: 255 },    // Türkiz
+            { r: 204, g: 51, b: 255 },   // Lila
+            { r: 0, g: 128, b: 255 }     // Királykék
+        ];
+
+        const MOUSE_CONFIG = {
+            speed_threshold: 300,    // Magas küszöb (ritkább interakció)
+            throttle_rate: 3
+        };
+
+        const INITIAL_SPLATS = {
+            count: 5,
+            delay_between: 250,
+            move_distance: 50,
+            move_steps: 1
+        };
+
+        // ============================================
+        // DEBUG LOG
+        // ============================================
+
+        function log(msg, color = '#0f0') {
+            const status = document.getElementById('status');
+            const timestamp = new Date().toLocaleTimeString();
+            status.innerHTML += `<div style="color:${color}">[${timestamp}] ${msg}</div>`;
+            console.log(msg);
+        }
+
+        // ============================================
+        // MONKEY PATCH STRATÉGIA
+        // ============================================
+
+        const canvas = document.getElementById('renderSurface');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        log('🎨 Canvas létrehozva');
+
+        // STRATÉGIA 1: Megpróbáljuk elfogni a Fluid konstruktor hívást
+        // és AZONNAL felülírni a multipleSplats metódust
+        const OriginalFluid = window.Fluid;
+
+        if (!OriginalFluid) {
+            log('❌ Fluid library nem található!', '#f00');
+        } else {
+            log('✅ Fluid library betöltve');
+
+            // Wrapper a Fluid konstruktor körül
+            window.Fluid = function(canvasElement) {
+                log('🔧 Fluid konstruktor hívva - monkey patch alkalmazása...');
+
+                // Eredeti konstruktor hívása
+                const instance = new OriginalFluid(canvasElement);
+
+                log('✅ Fluid instance létrehozva');
+
+                // MONKEY PATCH: Felülírjuk a multipleSplats metódust
+                // (ha elérhető a prototype-on vagy az instance-on)
+
+                // 1. Próbálkozás: Instance szinten
+                if (typeof instance.multipleSplats === 'function') {
+                    log('🔧 multipleSplats() metódus találva (instance szint)');
+                    const originalMultipleSplats = instance.multipleSplats;
+
+                    instance.multipleSplats = function(amount) {
+                        log(`🚫 multipleSplats(${amount}) BLOKKOLVA - fehér folt helyett NOP`, '#ff0');
+                        // Nem csinálunk semmit - így nem jelenik meg a piros/fehér folt
+                        return;
+                    };
+
+                    log('✅ multipleSplats() monkey patch SIKERES (instance)', '#0ff');
+                }
+
+                // 2. Próbálkozás: Prototype szinten
+                if (OriginalFluid.prototype && typeof OriginalFluid.prototype.multipleSplats === 'function') {
+                    log('🔧 multipleSplats() metódus találva (prototype szint)');
+                    const originalProtoMultipleSplats = OriginalFluid.prototype.multipleSplats;
+
+                    OriginalFluid.prototype.multipleSplats = function(amount) {
+                        log(`🚫 multipleSplats(${amount}) BLOKKOLVA - fehér folt helyett NOP (proto)`, '#ff0');
+                        return;
+                    };
+
+                    log('✅ multipleSplats() monkey patch SIKERES (prototype)', '#0ff');
+                }
+
+                return instance;
+            };
+
+            // Másoljuk át az eredeti konstruktor tulajdonságait
+            Object.setPrototypeOf(window.Fluid, OriginalFluid);
+            Object.setPrototypeOf(window.Fluid.prototype, OriginalFluid.prototype);
+        }
+
+        // ============================================
+        // FLUID INICIALIZÁLÁS
+        // ============================================
+
+        let myFluid;
+        let lastX = -1;
+        let lastY = -1;
+        let isSimulating = false;
+        let moveCounter = 0;
+
+        setTimeout(() => {
+            log('🎨 Fluid objektum létrehozása...');
+
+            try {
+                myFluid = new Fluid(canvas);
+                log('✅ Fluid objektum létrehozva');
+
+                // Konfiguráció
+                myFluid.mapBehaviors(PHYSICS_CONFIG);
+                log('✅ Fizikai paraméterek beállítva');
+
+                // STRATÉGIA 2: Ha a monkey patch nem működött,
+                // próbáljuk meg közvetlenül is felülírni
+                if (myFluid.multipleSplats && typeof myFluid.multipleSplats === 'function') {
+                    log('🔧 Másodlagos monkey patch - direkt override');
+                    myFluid.multipleSplats = function(amount) {
+                        log(`🚫 multipleSplats(${amount}) BLOKKOLVA (direkt)`, '#ff0');
+                        return;
+                    };
+                }
+
+                // Aktiválás ELŐTT próbáljuk blokkolni a multipleSplats-et
+                setTimeout(() => {
+                    log('🚀 Fluid aktiválása...');
+                    myFluid.activate();
+                    log('✅ Fluid aktiválva');
+
+                    // Kezdeti splat-ok létrehozása 300ms után
+                    setTimeout(() => {
+                        createInitialSplats();
+                    }, 300);
+                }, 100);
+
+            } catch (error) {
+                log(`❌ Hiba: ${error.message}`, '#f00');
+                console.error(error);
+            }
+        }, 500);
+
+        // ============================================
+        // SPLAT LÉTREHOZÁS
+        // ============================================
+
+        function createInitialSplats() {
+            log(`🎨 ${INITIAL_SPLATS.count} kezdeti splat létrehozása...`, '#ff0');
+
+            for (let i = 0; i < INITIAL_SPLATS.count; i++) {
+                setTimeout(() => {
+                    isSimulating = true;
+                    const x = (0.2 + Math.random() * 0.6) * canvas.width;
+                    const y = (0.2 + Math.random() * 0.6) * canvas.height;
+
+                    // Színbeállítás
+                    const colorIndex = i % FLUID_COLORS_RGB.length;
+                    myFluid.color = FLUID_COLORS_RGB[colorIndex];
+
+                    // Kattintás szimuláció
+                    canvas.dispatchEvent(new MouseEvent('mousedown', {
+                        clientX: x,
+                        clientY: y,
+                        bubbles: true,
+                        cancelable: true
+                    }));
+
+                    // Mozgás
+                    for (let step = 1; step <= INITIAL_SPLATS.move_steps; step++) {
+                        setTimeout(() => {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = (INITIAL_SPLATS.move_distance * step) / INITIAL_SPLATS.move_steps;
+                            canvas.dispatchEvent(new MouseEvent('mousemove', {
+                                clientX: x + Math.cos(angle) * dist,
+                                clientY: y + Math.sin(angle) * dist,
+                                bubbles: true,
+                                cancelable: true
+                            }));
+                        }, step * 20);
+                    }
+
+                    // Mouse up
+                    setTimeout(() => {
+                        const angle = Math.random() * Math.PI * 2;
+                        canvas.dispatchEvent(new MouseEvent('mouseup', {
+                            clientX: x + Math.cos(angle) * INITIAL_SPLATS.move_distance,
+                            clientY: y + Math.sin(angle) * INITIAL_SPLATS.move_distance,
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                        isSimulating = false;
+
+                        const colorName = ['türkiz', 'lila', 'kék'][colorIndex];
+                        log(`✅ Splat ${i+1}/${INITIAL_SPLATS.count}: ${colorName}`, '#0ff');
+                    }, INITIAL_SPLATS.move_steps * 20 + 50);
+                }, i * INITIAL_SPLATS.delay_between);
+            }
+        }
+
+        // ============================================
+        // EGÉR INTERAKCIÓ
+        // ============================================
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isSimulating || !e.isTrusted || !myFluid) return;
+
+            const x = e.clientX;
+            const y = e.clientY;
+
+            if (lastX !== -1 && lastY !== -1) {
+                const dx = x - lastX;
+                const dy = y - lastY;
+                const speed = Math.sqrt(dx * dx + dy * dy);
+
+                moveCounter++;
+                if (speed > MOUSE_CONFIG.speed_threshold &&
+                    moveCounter % MOUSE_CONFIG.throttle_rate === 0) {
+                    isSimulating = true;
+
+                    const colorIndex = Math.floor(Math.random() * FLUID_COLORS_RGB.length);
+                    myFluid.color = FLUID_COLORS_RGB[colorIndex];
+
+                    canvas.dispatchEvent(new MouseEvent('mousedown', {
+                        clientX: x,
+                        clientY: y,
+                        bubbles: true
+                    }));
+
+                    setTimeout(() => {
+                        canvas.dispatchEvent(new MouseEvent('mouseup', {
+                            clientX: x + dx,
+                            clientY: y + dy,
+                            bubbles: true
+                        }));
+                        isSimulating = false;
+                    }, 20);
+                }
+            }
+
+            lastX = x;
+            lastY = y;
+        }, { passive: true });
+
+        // ============================================
+        // RESIZE
+        // ============================================
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        log('✅ Study 3 betöltve - monkey patch aktív!', '#0ff');
+    </script>
+</body>
+</html>

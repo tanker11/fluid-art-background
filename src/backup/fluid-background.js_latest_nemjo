@@ -1,0 +1,433 @@
+// src/fluid-background.js - WebGL Fluid Simulation (Fluid-JS style)
+(function() {
+    'use strict';
+
+    class FluidBackground {
+        constructor(options = {}) {
+            this.options = {
+                containerId: options.containerId || 'fluid-background',
+                simResolution: options.simResolution || 128,
+                dyeResolution: options.dyeResolution || 512,
+                densityDissipation: options.densityDissipation || 0.97,
+                velocityDissipation: options.velocityDissipation || 0.98,
+                pressureDissipation: options.pressureDissipation || 0.8,
+                pressureIterations: options.pressureIterations || 25,
+                curl: options.curl || 30,
+                splatRadius: options.splatRadius || 0.01 // Nagyobb radius
+            };
+
+            this.canvas = null;
+            this.gl = null;
+            this.pointers = [];
+            this.splatStack = [];
+
+            this.init();
+        }
+
+        init() {
+            // Container
+            let container = document.getElementById(this.options.containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = this.options.containerId;
+                document.body.insertBefore(container, document.body.firstChild);
+            }
+
+            this.setupStyles(container);
+            this.setupCanvas(container);
+            this.initWebGL();
+            this.setupPrograms();
+            this.initFramebuffers();
+            this.setupEventListeners();
+
+            // Kezdeti splat-ok (színes foltok) - TÖBB!
+            this.multipleSplats(30);
+
+            this.update();
+        }
+
+        setupStyles(container) {
+            const styles = `
+                #${this.options.containerId} {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    z-index: -1;
+                    overflow: hidden;
+                }
+
+                #${this.options.containerId} canvas {
+                    width: 100%;
+                    height: 100%;
+                }
+            `;
+
+            if (!document.getElementById('fluid-bg-styles')) {
+                const styleSheet = document.createElement('style');
+                styleSheet.id = 'fluid-bg-styles';
+                styleSheet.textContent = styles;
+                document.head.appendChild(styleSheet);
+            }
+        }
+
+        setupCanvas(container) {
+            this.canvas = document.createElement('canvas');
+            container.appendChild(this.canvas);
+            this.resizeCanvas();
+        }
+
+        resizeCanvas() {
+            this.canvas.width = this.canvas.clientWidth;
+            this.canvas.height = this.canvas.clientHeight;
+        }
+
+        initWebGL() {
+            const params = {
+                alpha: false,
+                depth: false,
+                stencil: false,
+                antialias: false
+            };
+
+            this.gl = this.canvas.getContext('webgl2', params) ||
+                      this.canvas.getContext('webgl', params);
+
+            if (!this.gl) {
+                console.error('WebGL not supported');
+                return;
+            }
+
+            this.gl.clearColor(1.0, 1.0, 1.0, 1.0); // Fehér háttér
+        }
+
+        setupPrograms() {
+            // Egyszerűsített shader programok
+            const baseVertexShader = this.compileShader(this.gl.VERTEX_SHADER, `
+                precision highp float;
+                attribute vec2 aPosition;
+                varying vec2 vUv;
+                void main () {
+                    vUv = aPosition * 0.5 + 0.5;
+                    gl_Position = vec4(aPosition, 0.0, 1.0);
+                }
+            `);
+
+            const displayShader = this.compileShader(this.gl.FRAGMENT_SHADER, `
+                precision highp float;
+                varying vec2 vUv;
+                uniform sampler2D uTexture;
+                void main () {
+                    vec3 color = texture2D(uTexture, vUv).rgb;
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `);
+
+            const splatShader = this.compileShader(this.gl.FRAGMENT_SHADER, `
+                precision highp float;
+                varying vec2 vUv;
+                uniform sampler2D uTarget;
+                uniform float aspectRatio;
+                uniform vec3 color;
+                uniform vec2 point;
+                uniform float radius;
+                void main () {
+                    vec2 p = vUv - point.xy;
+                    p.x *= aspectRatio;
+                    vec3 splat = exp(-dot(p, p) / radius) * color;
+                    vec3 base = texture2D(uTarget, vUv).xyz;
+                    gl_FragColor = vec4(base + splat, 1.0);
+                }
+            `);
+
+            const advectionShader = this.compileShader(this.gl.FRAGMENT_SHADER, `
+                precision highp float;
+                varying vec2 vUv;
+                uniform sampler2D uVelocity;
+                uniform sampler2D uSource;
+                uniform vec2 texelSize;
+                uniform float dt;
+                uniform float dissipation;
+                void main () {
+                    vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
+                    gl_FragColor = dissipation * texture2D(uSource, coord);
+                }
+            `);
+
+            this.programs = {
+                display: this.createProgram(baseVertexShader, displayShader),
+                splat: this.createProgram(baseVertexShader, splatShader),
+                advection: this.createProgram(baseVertexShader, advectionShader)
+            };
+
+            this.setupBuffers();
+        }
+
+        compileShader(type, source) {
+            const shader = this.gl.createShader(type);
+            this.gl.shaderSource(shader, source);
+            this.gl.compileShader(shader);
+
+            if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                console.error(this.gl.getShaderInfoLog(shader));
+                return null;
+            }
+
+            return shader;
+        }
+
+        createProgram(vertexShader, fragmentShader) {
+            const program = this.gl.createProgram();
+            this.gl.attachShader(program, vertexShader);
+            this.gl.attachShader(program, fragmentShader);
+            this.gl.linkProgram(program);
+
+            if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+                console.error(this.gl.getProgramInfoLog(program));
+                return null;
+            }
+
+            return program;
+        }
+
+        setupBuffers() {
+            const buffer = this.gl.createBuffer();
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([-1, -1, -1, 1, 1, 1, 1, -1]), this.gl.STATIC_DRAW);
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.gl.createBuffer());
+            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), this.gl.STATIC_DRAW);
+
+            Object.values(this.programs).forEach(program => {
+                if (!program) return;
+                const position = this.gl.getAttribLocation(program, 'aPosition');
+                this.gl.enableVertexAttribArray(position);
+                this.gl.vertexAttribPointer(position, 2, this.gl.FLOAT, false, 0, 0);
+            });
+        }
+
+        initFramebuffers() {
+            this.density = this.createDoubleFBO(this.options.dyeResolution);
+            this.velocity = this.createDoubleFBO(this.options.simResolution);
+        }
+
+        createDoubleFBO(resolution) {
+            const fbo1 = this.createFBO(resolution, resolution, this.gl.RGBA, this.gl.LINEAR);
+            const fbo2 = this.createFBO(resolution, resolution, this.gl.RGBA, this.gl.LINEAR);
+
+            return {
+                read: fbo1,
+                write: fbo2,
+                swap: function() {
+                    let temp = this.read;
+                    this.read = this.write;
+                    this.write = temp;
+                }
+            };
+        }
+
+        createFBO(w, h, internalFormat, filter) {
+            const texture = this.gl.createTexture();
+            this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, filter);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, filter);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, internalFormat, w, h, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+
+            const fbo = this.gl.createFramebuffer();
+            this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fbo);
+            this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, texture, 0);
+
+            return {
+                texture,
+                fbo,
+                width: w,
+                height: h
+            };
+        }
+
+        setupEventListeners() {
+            window.addEventListener('resize', () => this.resizeCanvas());
+
+            this.canvas.addEventListener('mousemove', (e) => {
+                const pointer = this.pointers[0] || { x: 0, y: 0, dx: 0, dy: 0 };
+                const posX = e.offsetX / this.canvas.width;
+                const posY = 1.0 - (e.offsetY / this.canvas.height);
+
+                pointer.dx = (posX - pointer.x) * 10;
+                pointer.dy = (posY - pointer.y) * 10;
+                pointer.x = posX;
+                pointer.y = posY;
+
+                this.pointers[0] = pointer;
+            });
+
+            this.canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touches = e.targetTouches;
+                for (let i = 0; i < touches.length; i++) {
+                    const pointer = this.pointers[i] || { x: 0, y: 0, dx: 0, dy: 0 };
+                    const posX = touches[i].pageX / this.canvas.width;
+                    const posY = 1.0 - (touches[i].pageY / this.canvas.height);
+
+                    pointer.dx = (posX - pointer.x) * 10;
+                    pointer.dy = (posY - pointer.y) * 10;
+                    pointer.x = posX;
+                    pointer.y = posY;
+
+                    this.pointers[i] = pointer;
+                }
+            });
+        }
+
+        multipleSplats(amount) {
+            for (let i = 0; i < amount; i++) {
+                // ERŐS TÜRKIZ, LILA, KÖZÉPKÉK színek
+                const colors = [
+                    { r: 0.0, g: 1.0, b: 1.0 },   // Erős türkiz
+                    { r: 0.8, g: 0.2, b: 1.0 },   // Élénk lila
+                    { r: 0.0, g: 0.5, b: 1.0 }    // Élénk kék
+                ];
+
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const x = Math.random();
+                const y = Math.random();
+                const dx = (Math.random() - 0.5) * 100;
+                const dy = (Math.random() - 0.5) * 100;
+
+                this.splat(x, y, dx, dy, color);
+            }
+        }
+
+        splat(x, y, dx, dy, color) {
+            this.splatStack.push({ x, y, dx, dy, color });
+        }
+
+        update() {
+            // Advection
+            if (this.programs.advection) {
+                this.applyAdvection(this.velocity, this.velocity, this.options.velocityDissipation);
+                this.applyAdvection(this.velocity, this.density, this.options.densityDissipation);
+            }
+
+            // Splat rendering
+            for (let i = 0; i < this.splatStack.length; i++) {
+                const splat = this.splatStack[i];
+                this.applySplat(splat);
+            }
+            this.splatStack = [];
+
+            // Pointer interaction
+            this.pointers.forEach(pointer => {
+                if (pointer.dx !== 0 || pointer.dy !== 0) {
+                    this.splat(pointer.x, pointer.y, pointer.dx, pointer.dy, {
+                        r: 0.0, g: 1.0, b: 1.0 // Erős türkiz
+                    });
+                }
+            });
+
+            // Folyamatos random splat-ok (hogy mindig mozogjon)
+            if (Math.random() < 0.05) {
+                const colors = [
+                    { r: 0.0, g: 1.0, b: 1.0 },
+                    { r: 0.8, g: 0.2, b: 1.0 },
+                    { r: 0.0, g: 0.5, b: 1.0 }
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                this.splat(
+                    Math.random(),
+                    Math.random(),
+                    (Math.random() - 0.5) * 50,
+                    (Math.random() - 0.5) * 50,
+                    color
+                );
+            }
+
+            // Display
+            this.render(this.density.read);
+
+            requestAnimationFrame(() => this.update());
+        }
+
+        applyAdvection(velocity, source, dissipation) {
+            const program = this.programs.advection;
+            this.gl.useProgram(program);
+
+            this.gl.uniform2f(this.gl.getUniformLocation(program, 'texelSize'),
+                1.0 / source.read.width, 1.0 / source.read.height);
+            this.gl.uniform1f(this.gl.getUniformLocation(program, 'dt'), 0.016);
+            this.gl.uniform1f(this.gl.getUniformLocation(program, 'dissipation'), dissipation);
+
+            // Texture binding FIX
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, velocity.read.texture);
+            this.gl.uniform1i(this.gl.getUniformLocation(program, 'uVelocity'), 0);
+
+            this.gl.activeTexture(this.gl.TEXTURE1);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, source.read.texture);
+            this.gl.uniform1i(this.gl.getUniformLocation(program, 'uSource'), 1);
+
+            this.blit(source.write.fbo);
+            source.swap();
+        }
+
+        applySplat(splat) {
+            const program = this.programs.splat;
+            this.gl.useProgram(program);
+
+            this.gl.uniform1f(this.gl.getUniformLocation(program, 'aspectRatio'),
+                this.canvas.width / this.canvas.height);
+            this.gl.uniform2f(this.gl.getUniformLocation(program, 'point'), splat.x, splat.y);
+            this.gl.uniform3f(this.gl.getUniformLocation(program, 'color'),
+                splat.color.r, splat.color.g, splat.color.b);
+            this.gl.uniform1f(this.gl.getUniformLocation(program, 'radius'), this.options.splatRadius);
+
+            // Texture binding FIX
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.density.read.texture);
+            this.gl.uniform1i(this.gl.getUniformLocation(program, 'uTarget'), 0);
+
+            this.blit(this.density.write.fbo);
+            this.density.swap();
+        }
+
+        render(target) {
+            this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+            this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+            const program = this.programs.display;
+            this.gl.useProgram(program);
+            this.gl.uniform1i(this.gl.getUniformLocation(program, 'uTexture'), 0);
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, target.texture);
+
+            this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
+        }
+
+        blit(destination) {
+            this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, destination);
+            this.gl.drawElements(this.gl.TRIANGLES, 6, this.gl.UNSIGNED_SHORT, 0);
+        }
+
+        destroy() {
+            // Cleanup WebGL resources
+            if (this.canvas && this.canvas.parentNode) {
+                this.canvas.parentNode.removeChild(this.canvas);
+            }
+        }
+    }
+
+    // Globális elérhetőség
+    window.FluidBackground = FluidBackground;
+
+    // Automatikus inicializálás
+    document.addEventListener('DOMContentLoaded', () => {
+        const autoInit = document.querySelector('[data-fluid-background]');
+        if (autoInit) {
+            const options = autoInit.dataset.fluidBackground ?
+                JSON.parse(autoInit.dataset.fluidBackground) : {};
+            new FluidBackground(options);
+        }
+    });
+})();

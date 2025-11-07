@@ -1,0 +1,497 @@
+// src/fluid-background.js
+(function() {
+    'use strict';
+
+    class FluidBackground {
+        constructor(options = {}) {
+            this.options = {
+                containerId: options.containerId || 'fluid-background',
+                // Fluid art inspirált színek a képről
+                colors: options.colors || [
+                    '#00A896',  // Mély türkiz (képről)
+                    '#02C39A',  // Világos türkiz
+                    '#FFD60A',  // Élénk sárga
+                    '#FFB700',  // Arany-sárga
+                    '#05668D',  // Mély kék
+                    '#028090',  // Kék-zöld
+                    '#8FBC8F',  // Sötét pasztell zöld
+                    '#00B4D8',  // Világoskék
+                    '#90E0EF',  // Világos türkiz
+                    '#CAF0F8'   // Nagyon világos kék
+                ],
+                cellColors: options.cellColors || [
+                    '#FFD700',  // Arany (sejt kontúr)
+                    '#FFA500',  // Narancssárga
+                    '#FF8C00'   // Sötét narancs
+                ],
+                particleCount: options.particleCount || 8,
+                baseSpeed: options.baseSpeed || 1.2,
+                friction: options.friction || 0.985, // Lassabb lassulás
+                mouseForce: options.mouseForce || 0.4,
+                clickForce: options.clickForce || 6,
+                opacity: options.opacity || 0.95,
+                blur: options.blur || 40, // Sokkal kevesebb blur!
+                interactive: options.interactive !== false,
+                performance: options.performance || 'auto',
+                cellPattern: options.cellPattern !== false, // Sejt minta engedélyezése
+                swirl: options.swirl !== false // Örvény effekt
+            };
+
+            this.canvas = null;
+            this.ctx = null;
+            this.blobs = [];
+            this.animationId = null;
+            this.mouseX = window.innerWidth / 2;
+            this.mouseY = window.innerHeight / 2;
+            this.prevMouseX = this.mouseX;
+            this.prevMouseY = this.mouseY;
+            this.energy = 0; // Mozgási energia
+
+            this.init();
+        }
+        
+        init() {
+            // Container létrehozása vagy megkeresése
+            let container = document.getElementById(this.options.containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = this.options.containerId;
+                document.body.insertBefore(container, document.body.firstChild);
+            }
+            
+            // Stílusok beállítása
+            this.setupStyles(container);
+            
+            // Canvas létrehozása
+            this.setupCanvas(container);
+            
+            // Blobok inicializálása
+            this.initBlobs();
+            
+            // Event listenerek
+            this.setupEventListeners();
+            
+            // Animáció indítása
+            this.animate();
+        }
+        
+        setupStyles(container) {
+            const styles = `
+                #${this.options.containerId} {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    z-index: -1;
+                    overflow: hidden;
+                    pointer-events: none;
+                }
+                
+                #${this.options.containerId} canvas {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    filter: blur(${this.options.blur}px);
+                    opacity: ${this.options.opacity};
+                    width: 110%;
+                    height: 110%;
+                }
+                
+                /* Performance optimalizáció */
+                #${this.options.containerId} {
+                    will-change: transform;
+                    transform: translateZ(0);
+                    backface-visibility: hidden;
+                }
+            `;
+            
+            if (!document.getElementById('fluid-bg-styles')) {
+                const styleSheet = document.createElement('style');
+                styleSheet.id = 'fluid-bg-styles';
+                styleSheet.textContent = styles;
+                document.head.appendChild(styleSheet);
+            }
+        }
+        
+        setupCanvas(container) {
+            this.canvas = document.createElement('canvas');
+            this.ctx = this.canvas.getContext('2d');
+            container.appendChild(this.canvas);
+            this.resizeCanvas();
+        }
+        
+        resizeCanvas() {
+            this.canvas.width = window.innerWidth * 1.1;
+            this.canvas.height = window.innerHeight * 1.1;
+        }
+        
+        initBlobs() {
+            this.blobs = [];
+            for (let i = 0; i < this.options.particleCount; i++) {
+                const color = this.options.colors[Math.floor(Math.random() * this.options.colors.length)];
+
+                this.blobs.push({
+                    x: Math.random() * this.canvas.width,
+                    y: Math.random() * this.canvas.height,
+                    vx: (Math.random() - 0.5) * this.options.baseSpeed,
+                    vy: (Math.random() - 0.5) * this.options.baseSpeed,
+                    radius: Math.random() * 200 + 200, // Nagyobb blobok
+                    color: color,
+                    mass: Math.random() * 0.5 + 0.5,
+                    rotation: Math.random() * Math.PI * 2, // Forgás animációhoz
+                    rotationSpeed: (Math.random() - 0.5) * 0.02,
+                    // Sejt-szerű minták (cells)
+                    cells: this.options.cellPattern ? this.generateCells() : [],
+                    // Örvény paraméterek
+                    swirlIntensity: Math.random() * 0.5 + 0.5,
+                    swirlDirection: Math.random() > 0.5 ? 1 : -1
+                });
+            }
+            // Kezdő energia
+            this.energy = 80;
+        }
+
+        generateCells() {
+            const cells = [];
+            const cellCount = Math.floor(Math.random() * 8) + 8; // 8-15 sejt (TÖBB!)
+
+            for (let i = 0; i < cellCount; i++) {
+                cells.push({
+                    offsetX: (Math.random() - 0.5) * 180, // Nagyobb terület
+                    offsetY: (Math.random() - 0.5) * 180,
+                    radius: Math.random() * 50 + 30, // SOKKAL nagyobb sejtek (30-80px)
+                    color: this.options.cellColors[Math.floor(Math.random() * this.options.cellColors.length)]
+                });
+            }
+
+            return cells;
+        }
+        
+        setupEventListeners() {
+            // Resize handler
+            window.addEventListener('resize', () => {
+                this.resizeCanvas();
+            });
+
+            // Mouse interaction
+            if (this.options.interactive) {
+                document.addEventListener('mousemove', (e) => {
+                    this.prevMouseX = this.mouseX;
+                    this.prevMouseY = this.mouseY;
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+
+                    // Egér mozgás sebessége alapján energia hozzáadása
+                    const dx = this.mouseX - this.prevMouseX;
+                    const dy = this.mouseY - this.prevMouseY;
+                    const mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+
+                    if (mouseSpeed > 2) {
+                        this.energy += mouseSpeed * 0.5;
+                        this.energy = Math.min(this.energy, 200); // Max energia
+                    }
+                });
+
+                // Klikk = nagy energia lökés
+                document.addEventListener('click', (e) => {
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                    this.energy += 100; // Nagy energia boost
+
+                    // Közeli blobok extra lökése
+                    this.blobs.forEach(blob => {
+                        const dx = e.clientX - blob.x;
+                        const dy = e.clientY - blob.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < 300) {
+                            const force = this.options.clickForce / (distance * 0.01);
+                            blob.vx += (dx / distance) * force;
+                            blob.vy += (dy / distance) * force;
+                        }
+                    });
+                });
+            }
+
+            // Performance mode detection
+            if (this.options.performance === 'auto') {
+                this.detectPerformance();
+            }
+
+            // Reduced motion preference
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            if (prefersReducedMotion.matches) {
+                this.options.friction = 0.95; // Gyorsabb lassulás
+            }
+        }
+        
+        detectPerformance() {
+            // FPS mérés
+            let fps = 60;
+            let lastTime = performance.now();
+            let frames = 0;
+            
+            const measureFPS = () => {
+                frames++;
+                const currentTime = performance.now();
+                
+                if (currentTime >= lastTime + 1000) {
+                    fps = Math.round(frames * 1000 / (currentTime - lastTime));
+                    
+                    // Teljesítmény állítása FPS alapján
+                    if (fps < 30) {
+                        this.options.particleCount = Math.max(2, this.options.particleCount - 1);
+                        this.options.blur = Math.min(120, this.options.blur + 20);
+                    }
+                    
+                    lastTime = currentTime;
+                    frames = 0;
+                }
+                
+                if (frames < 100) {
+                    requestAnimationFrame(measureFPS);
+                }
+            };
+            
+            measureFPS();
+        }
+        
+        animate() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Energia csökkenése (lassulás)
+            this.energy *= this.options.friction;
+
+            // Ha az energia nagyon alacsony, teljesen megáll
+            const isMoving = this.energy > 0.5;
+
+            // Blobok mozgatása és rajzolása
+            this.blobs.forEach(blob => {
+                if (isMoving) {
+                    // Mozgatás sebességgel
+                    blob.x += blob.vx;
+                    blob.y += blob.vy;
+
+                    // Súrlódás (lassulás)
+                    blob.vx *= this.options.friction;
+                    blob.vy *= this.options.friction;
+
+                    // Interakció egérrel (ha van energia)
+                    if (this.options.interactive && this.energy > 5) {
+                        const dx = this.mouseX - blob.x;
+                        const dy = this.mouseY - blob.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < 400) {
+                            const force = (this.options.mouseForce * this.energy) / (distance * 0.1);
+                            blob.vx += (dx / distance) * force * 0.01;
+                            blob.vy += (dy / distance) * force * 0.01;
+                        }
+                    }
+
+                    // Határok ellenőrzése (visszapattanás)
+                    if (blob.x < -blob.radius) {
+                        blob.x = this.canvas.width + blob.radius;
+                    }
+                    if (blob.x > this.canvas.width + blob.radius) {
+                        blob.x = -blob.radius;
+                    }
+                    if (blob.y < -blob.radius) {
+                        blob.y = this.canvas.height + blob.radius;
+                    }
+                    if (blob.y > this.canvas.height + blob.radius) {
+                        blob.y = -blob.radius;
+                    }
+
+                    // Sebesség limitálás
+                    const speed = Math.sqrt(blob.vx * blob.vx + blob.vy * blob.vy);
+                    const maxSpeed = 8;
+                    if (speed > maxSpeed) {
+                        blob.vx = (blob.vx / speed) * maxSpeed;
+                        blob.vy = (blob.vy / speed) * maxSpeed;
+                    }
+                }
+
+                // Rajzolás (mindig)
+                this.drawBlob(blob);
+            });
+
+            this.animationId = requestAnimationFrame(() => this.animate());
+        }
+        
+        drawBlob(blob) {
+            this.ctx.save();
+
+            // 1. ALAP BLOB - Telített, erős szín
+            const gradient = this.ctx.createRadialGradient(
+                blob.x, blob.y, 0,
+                blob.x, blob.y, blob.radius
+            );
+
+            // ERŐSEBB színek, kevesebb átlátszóság
+            gradient.addColorStop(0, blob.color + 'FF');    // Teljesen telített közép
+            gradient.addColorStop(0.3, blob.color + 'FF');  // Tartós telítettség
+            gradient.addColorStop(0.6, blob.color + 'CC');  // Lassú fade
+            gradient.addColorStop(0.85, blob.color + '88');
+            gradient.addColorStop(1, blob.color + '00');
+
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(blob.x, blob.y, blob.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // 2. SEJT MINTÁK - NAGY, LÁTHATÓ, KONTRASZTOS
+            if (this.options.cellPattern && blob.cells) {
+                blob.cells.forEach(cell => {
+                    const cellX = blob.x + cell.offsetX;
+                    const cellY = blob.y + cell.offsetY;
+
+                    // FEHÉR/világos belső (mint a valódi fluid art sejtek)
+                    const cellGradient = this.ctx.createRadialGradient(
+                        cellX, cellY, 0,
+                        cellX, cellY, cell.radius
+                    );
+
+                    // Világos középpont (fehér/világos szín)
+                    cellGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                    cellGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.7)');
+                    cellGradient.addColorStop(0.6, this.adjustBrightness(blob.color, 50) + 'CC');
+                    cellGradient.addColorStop(1, blob.color + '00');
+
+                    this.ctx.fillStyle = cellGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cellX, cellY, cell.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // VASTAG ARANY KONTÚR - jól látható!
+                    this.ctx.strokeStyle = cell.color;
+                    this.ctx.lineWidth = 5; // Vastagabb!
+                    this.ctx.shadowColor = cell.color;
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cellX, cellY, cell.radius, 0, Math.PI * 2);
+                    this.ctx.stroke();
+
+                    // Reset shadow
+                    this.ctx.shadowBlur = 0;
+
+                    // Belső arany csillogás
+                    this.ctx.strokeStyle = cell.color + 'CC';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cellX, cellY, cell.radius * 0.6, 0, Math.PI * 2);
+                    this.ctx.stroke();
+
+                    // Legbelső fény
+                    const innerGlow = this.ctx.createRadialGradient(
+                        cellX, cellY, 0,
+                        cellX, cellY, cell.radius * 0.3
+                    );
+                    innerGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                    innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                    this.ctx.fillStyle = innerGlow;
+                    this.ctx.beginPath();
+                    this.ctx.arc(cellX, cellY, cell.radius * 0.3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            // 3. MÁRVÁNYOS ÖRVÉNYEK - Éles vonalak
+            if (this.options.swirl) {
+                blob.rotation += blob.rotationSpeed * 0.5;
+
+                // Mentés rotation előtt
+                this.ctx.save();
+                this.ctx.translate(blob.x, blob.y);
+                this.ctx.rotate(blob.rotation);
+
+                // Több márványos vonal
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI * 2 / 5) * i;
+                    const startRadius = blob.radius * 0.2;
+                    const endRadius = blob.radius * 0.9;
+
+                    const startX = Math.cos(angle) * startRadius;
+                    const startY = Math.sin(angle) * startRadius;
+                    const endX = Math.cos(angle + 0.3) * endRadius;
+                    const endY = Math.sin(angle + 0.3) * endRadius;
+
+                    // Sötétebb örvény vonal
+                    const swirlColor = this.adjustBrightness(blob.color, -40);
+                    this.ctx.strokeStyle = swirlColor + '99';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.lineCap = 'round';
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(startX, startY);
+                    this.ctx.quadraticCurveTo(
+                        Math.cos(angle + 0.15) * (startRadius + endRadius) / 2,
+                        Math.sin(angle + 0.15) * (startRadius + endRadius) / 2,
+                        endX,
+                        endY
+                    );
+                    this.ctx.stroke();
+
+                    // Világosabb fény vonal mellette
+                    this.ctx.strokeStyle = this.adjustBrightness(blob.color, 60) + '66';
+                    this.ctx.lineWidth = 1.5;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(startX + 2, startY + 2);
+                    this.ctx.quadraticCurveTo(
+                        Math.cos(angle + 0.15) * (startRadius + endRadius) / 2 + 2,
+                        Math.sin(angle + 0.15) * (startRadius + endRadius) / 2 + 2,
+                        endX + 2,
+                        endY + 2
+                    );
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore(); // Restore rotation
+            }
+
+            this.ctx.restore();
+        }
+
+        // Szín világosság módosítása
+        adjustBrightness(color, amount) {
+            const hex = color.replace('#', '');
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+
+            r = Math.max(0, Math.min(255, r + amount));
+            g = Math.max(0, Math.min(255, g + amount));
+            b = Math.max(0, Math.min(255, b + amount));
+
+            return '#' +
+                r.toString(16).padStart(2, '0') +
+                g.toString(16).padStart(2, '0') +
+                b.toString(16).padStart(2, '0');
+        }
+        
+        destroy() {
+            if (this.animationId) {
+                cancelAnimationFrame(this.animationId);
+            }
+            if (this.canvas && this.canvas.parentNode) {
+                this.canvas.parentNode.removeChild(this.canvas);
+            }
+        }
+    }
+    
+    // Globális elérhetőség biztosítása
+    window.FluidBackground = FluidBackground;
+    
+    // Automatikus inicializálás, ha van data-fluid-background attribútum
+    document.addEventListener('DOMContentLoaded', () => {
+        const autoInit = document.querySelector('[data-fluid-background]');
+        if (autoInit) {
+            const options = autoInit.dataset.fluidBackground ? 
+                JSON.parse(autoInit.dataset.fluidBackground) : {};
+            new FluidBackground(options);
+        }
+    });
+})();

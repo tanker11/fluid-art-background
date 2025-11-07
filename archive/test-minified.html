@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minified Fluid Art Background Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        .test-content {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            margin: 40px auto;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 800px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .info-box {
+            background: rgba(103, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fluid háttér container -->
+    <div id="fluid-background"></div>
+
+    <!-- Test tartalom -->
+    <div class="test-content">
+        <h1>🎨 Minified verzió teszt <span class="badge">7.0 KB</span></h1>
+
+        <div class="info-box">
+            <strong>✅ Minifikálás sikeres!</strong><br>
+            Méret: <code>16.1 KB → 7.0 KB</code> (56.3% csökkentés)
+        </div>
+
+        <p>
+            Ez a teszt a <strong>dist/fluid-background.min.js</strong> fájlt használja.
+        </p>
+
+        <p><strong>Teszteld:</strong></p>
+        <ul>
+            <li>Mozgasd az egeret - hover effekt működik?</li>
+            <li>Nyomd meg az F12-t - van console hiba?</li>
+            <li>Látható a légzés animáció?</li>
+            <li>Látszanak a színes sejtek (kék, lila, korall, pink)?</li>
+        </ul>
+
+        <p><strong>UNAS beillesztéshez szükséges:</strong></p>
+        <ol>
+            <li>GitHub repository létrehozása</li>
+            <li>dist/fluid-background.min.js feltöltése</li>
+            <li>jsDelivr CDN URL használata UNAS-ban</li>
+        </ol>
+
+        <div class="info-box" style="border-left-color: #FF5722; background: rgba(255, 87, 34, 0.1);">
+            <strong>⚠️ Következő lépés:</strong><br>
+            Teszteld ezt az oldalt böngészőben. Ha minden rendben, feltöltheted GitHub-ra!
+        </div>
+    </div>
+
+    <!-- Minified script betöltése -->
+    <script src="dist/fluid-background.min.js"></script>
+
+    <!-- Inicializálás -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fluidBg = new FluidBackground({
+                containerId: 'fluid-background'
+            });
+
+            console.log('✅ MINIFIED Fluid Art háttér betöltve');
+            console.log('📦 Fájl méret: 7.0 KB (56% csökkentés)');
+            console.log('🎨 Sejtek száma:', fluidBg.cells.length);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Inject Test - inject_custom_fluid_parametric.js</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: white;
+            font-family: 'Courier New', monospace;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0ff;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 450px;
+            border: 2px solid #0ff;
+        }
+
+        #info h3 {
+            margin: 0 0 15px 0;
+            color: #0f0;
+            font-size: 16px;
+            border-bottom: 1px solid #0ff;
+            padding-bottom: 8px;
+        }
+
+        .param {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .param strong {
+            color: #ff0;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🧪 Direct Inject Test</h3>
+        <div class="param"><strong>Fájl:</strong> src/to_unas/inject_custom_fluid_parametric.js</div>
+        <div class="param"><strong>Custom Build:</strong> dist/fluid-js-custom.min.js</div>
+        <div class="param"><strong>Háttér:</strong> Fehér (r=255, g=255, b=255)</div>
+        <div class="param"><strong>Színek:</strong> Türkiz, Lila, Királykék (FIX!)</div>
+        <div class="param"><strong>multi_color:</strong> false (NINCS random szín!)</div>
+        <div class="param" style="margin-top: 10px; border-top: 1px solid #0ff; padding-top: 10px;">
+            <strong>✅ Ellenőrizd:</strong><br>
+            1. Console (F12) - részletes log-ok<br>
+            2. Türkiz → Lila → Kék → Türkiz → Lila sorrend<br>
+            3. NINCS random szín!<br>
+            4. NINCS fehéres árnyalat!
+        </div>
+    </div>
+
+    <!-- 1. Custom Fluid-JS betöltése -->
+    <script src="dist/fluid-js-custom.min.js"></script>
+
+    <!-- 2. Inject script módosítása - átírjuk a script.src sort -->
+    <script>
+        // Betöltjük az inject scriptet
+        fetch('src/to_unas/inject_custom_fluid_parametric.js')
+            .then(response => response.text())
+            .then(code => {
+                console.log('📥 Inject script betöltve');
+
+                // Módosítjuk a script betöltést - már betöltöttük a custom build-et
+                code = code.replace(
+                    /script\.src = ['"].*?['"];/g,
+                    "console.log('⚠️ Custom build már betöltve, skip script.src'); script.onload();"
+                );
+
+                // Eltávolítjuk az IIFE wrapper-t a dupla hívás elkerülésére
+                code = code.replace(/^\(function\(\)\s*\{[\s\S]*'use strict';/, "'use strict';");
+                code = code.replace(/\}\)\(\);?\s*$/, '');
+
+                // Wrapper, hogy az IIFE-ben deklarált változók globálisak legyenek a scope-ban
+                const wrappedCode = `(function() {\n${code}\n})();`;
+
+                // Végrehajtjuk
+                eval(wrappedCode);
+
+                console.log('✅ Inject script végrehajtva');
+            })
+            .catch(error => {
+                console.error('❌ Hiba az inject script betöltésekor:', error);
+            });
+    </script>
+</body>
+</html>

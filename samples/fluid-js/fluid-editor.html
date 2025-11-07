@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <title>Fluid-JS - Paraméter szerkesztő</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Fluid-canvas CDN (README szerint) -->
+  <script src="https://cdn.jsdelivr.net/npm/fluid-canvas@latest"></script>
+
+  <style>
+    html,body { height:100%; margin:0; font-family: Arial, Helvetica, sans-serif; background:#111; color:#eee; }
+    #app { display:flex; height:100vh; width:100vw; }
+    #canvas-wrap { flex:1; position:relative; overflow:hidden; }
+    canvas#renderSurface { width:100%; height:100%; display:block; }
+
+    #panel {
+      width:360px;
+      max-width:40%;
+      background:rgba(8,8,8,0.9);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.7);
+      padding:12px;
+      overflow:auto;
+    }
+
+    h2 { margin:6px 0 10px 0; font-size:18px; color:#f3f3f3; }
+    .group { margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.04); }
+    label { display:block; font-size:13px; margin-bottom:4px; color:#cfcfcf; }
+    .row { display:flex; gap:8px; align-items:center; }
+    input[type="range"] { width:100%; }
+    input[type="color"] { width:42px; height:28px; border:0; padding:0; background:none; }
+    input[type="number"] { width:70px; padding:4px; }
+    .flex { display:flex; gap:8px; align-items:center; }
+    button { margin-top:8px; padding:8px 10px; border-radius:6px; border:0; cursor:pointer; background:#1e88e5; color:white; }
+    small.hint { color:#9d9d9d; display:block; margin-top:4px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="canvas-wrap">
+    <canvas id="renderSurface"></canvas>
+  </div>
+
+  <div id="panel">
+    <h2>Fluid simulator — Paraméter szerkesztő</h2>
+
+    <div class="group">
+      <label>Felbontások</label>
+      <div class="row">
+        <div style="flex:1">
+          <label>Sim resolution: <span id="sim_res_val">128</span></label>
+          <input id="sim_res" type="range" min="32" max="512" step="1" value="128">
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div style="flex:1">
+          <label>Dye resolution: <span id="dye_res_val">512</span></label>
+          <input id="dye_res" type="range" min="64" max="2048" step="1" value="512">
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>Fizika</label>
+      <div class="row">
+        <label style="width:120px">Dissipation</label>
+        <input id="dissipation" type="range" min="0.90" max="1.0" step="0.001" value="0.97">
+        <div style="width:48px"><input id="dissipation_num" type="number" step="0.001" min="0" max="1" value="0.97"></div>
+      </div>
+      <div class="row">
+        <label style="width:120px">Velocity</label>
+        <input id="velocity" type="range" min="0.8" max="1.05" step="0.001" value="0.98">
+        <div style="width:48px"><input id="velocity_num" type="number" step="0.001" min="0" max="2" value="0.98"></div>
+      </div>
+      <div class="row">
+        <label style="width:120px">Pressure</label>
+        <input id="pressure" type="range" min="0" max="1.6" step="0.01" value="0.8">
+        <div style="width:48px"><input id="pressure_num" type="number" step="0.01" min="0" max="5" value="0.8"></div>
+      </div>
+      <div class="row">
+        <label style="width:120px">Pressure iterations</label>
+        <input id="pressure_iter" type="range" min="1" max="100" step="1" value="20">
+        <div style="width:48px"><input id="pressure_iter_num" type="number" step="1" min="1" max="200" value="20"></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <label style="width:120px">Curl</label>
+        <input id="curl" type="range" min="0" max="100" step="1" value="0">
+        <div style="width:48px"><input id="curl_num" type="number" step="1" min="0" max="1000" value="0"></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <label style="width:120px">Emitter size</label>
+        <input id="emitter_size" type="range" min="0.1" max="3.0" step="0.01" value="0.5">
+        <div style="width:48px"><input id="emitter_size_num" type="number" step="0.01" min="0.01" max="10" value="0.5"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>Render beállítások</label>
+      <div class="flex" style="margin-bottom:8px;">
+        <input id="render_shaders" type="checkbox" checked> <label for="render_shaders">Render shaders</label>
+      </div>
+
+      <div class="flex" style="margin-bottom:8px;">
+        <input id="multi_color" type="checkbox" checked> <label for="multi_color">Multi color</label>
+      </div>
+
+      <div class="flex" style="margin-bottom:8px;">
+        <input id="render_bloom" type="checkbox"> <label for="render_bloom">Bloom</label>
+      </div>
+
+      <div class="row">
+        <label style="width:120px">Intensity</label>
+        <input id="intensity" type="range" min="0" max="2" step="0.01" value="0.8">
+        <div style="width:48px"><input id="intensity_num" type="number" step="0.01" min="0" max="5" value="0.8"></div>
+      </div>
+
+      <div class="row">
+        <label style="width:120px">Threshold</label>
+        <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.6">
+        <div style="width:48px"><input id="threshold_num" type="number" step="0.01" min="0" max="1" value="0.6"></div>
+      </div>
+
+      <div class="row">
+        <label style="width:120px">Soft knee</label>
+        <input id="soft_knee" type="range" min="0" max="1" step="0.01" value="0.7">
+        <div style="width:48px"><input id="soft_knee_num" type="number" step="0.01" min="0" max="1" value="0.7"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>Background</label>
+      <div class="row" style="margin-bottom:8px;">
+        <select id="bg_mode">
+          <option value="solid">Solid</option>
+          <option value="gradient">Gradient</option>
+          <option value="image">Image (URL)</option>
+        </select>
+      </div>
+
+      <div id="bg_solid_row" class="row">
+        <label>Color</label>
+        <input id="bg_solid_color" type="color" value="#0f0f0f">
+      </div>
+
+      <div id="bg_gradient_row" style="display:none;">
+        <label>Gradient stops (comma separated CSS colors)</label>
+        <input id="bg_grad_value" type="text" value="#e66465, #9198e5" style="width:100%;">
+        <small class="hint">Típus: linear vagy radial (alatta)</small>
+        <select id="bg_grad_type"><option value="linear">linear</option><option value="radial">radial</option></select>
+      </div>
+
+      <div id="bg_image_row" style="display:none;">
+        <label>Image URL</label>
+        <input id="bg_image_url" type="text" value="" placeholder="https://...">
+        <small class="hint">Átlátszó háttérhez pipáld a 'transparent' opciót.</small>
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <input id="transparent_bg" type="checkbox"> <label for="transparent_bg">Transparent canvas background</label>
+      </div>
+
+      <div style="margin-top:8px;">
+        <button id="apply_bg">Apply background</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>Általános</label>
+      <div class="flex" style="margin-bottom:8px;">
+        <input id="paused" type="checkbox"> <label for="paused">Paused</label>
+      </div>
+      <div class="flex" style="margin-bottom:8px;">
+        <input id="embedded_dither" type="checkbox"> <label for="embedded_dither">Embedded dither</label>
+      </div>
+
+      <div class="row">
+        <button id="recreate">Újra-aktiválás (re-create)</button>
+        <button id="reset">Reset alapok</button>
+      </div>
+
+      <small class="hint">Megjegyzés: egyes paraméterek (pl. sim_resolution) újraaktiválást igényelnek — használd az "Újra-aktiválás" gombot.</small>
+    </div>
+
+    <div class="group">
+      <label>Quick color palette (for emitters / dye)</label>
+      <div class="row" style="gap:6px;">
+        <input id="color1" type="color" value="#ff0040">
+        <input id="color2" type="color" value="#00ffd5">
+        <input id="color3" type="color" value="#fffb00">
+        <input id="color4" type="color" value="#7a00ff">
+      </div>
+      <small class="hint">Ha a lib multi_color opciót támogatja, ezeket beállítjuk a PARAMS.colorStops mezőre (ha van).</small>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // --- Inicializálás ---
+  const canvas = document.getElementById('renderSurface');
+
+  // Példa: Fluid globális class a CDN-ből. README szerint `new Fluid(canvas)`
+  let myFluid = new Fluid(canvas);
+
+  // Default mapping (megegyezik a README példáival)
+  const defaultMap = {
+    sim_resolution: 128,
+    dye_resolution: 512,
+
+    paused: false,
+    embedded_dither: true,
+
+    dissipation: 0.97,
+    velocity: 0.98,
+    pressure: 0.8,
+    pressure_iteration: 20,
+    curl: 0,
+    emitter_size: 0.5,
+
+    render_shaders: true,
+    multi_color: true,
+    render_bloom: false,
+    bloom_iterations: 8,
+    bloom_resolution: 256,
+    intensity: 0.8,
+    threshold: 0.6,
+    soft_knee: 0.7,
+
+    background_color: { r: 15, g: 15, b: 15 },
+    transparent: false
+  };
+
+  // Aktiváljuk az alap beállításokkal
+  myFluid.mapBehaviors(Object.assign({}, defaultMap));
+  myFluid.activate();
+
+  // --- UI helper fgv-ek ---
+  function toRGBObj(hex) {
+    // hex like #rrggbb
+    const v = hex.replace('#','');
+    const r = parseInt(v.slice(0,2),16);
+    const g = parseInt(v.slice(2,4),16);
+    const b = parseInt(v.slice(4,6),16);
+    return { r, g, b };
+  }
+  function hexFromRGBObj(o) {
+    return '#' + [o.r,o.g,o.b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+
+  // --- CONNECT UI elemekhez ---
+  const $ = id => document.getElementById(id);
+
+  // resolution
+  $('sim_res').addEventListener('input', e => {
+    $('sim_res_val').textContent = e.target.value;
+  });
+
+  $('dye_res').addEventListener('input', e => {
+    $('dye_res_val').textContent = e.target.value;
+  });
+
+  // Generic two-way binding for ranges + numeric inputs
+  function bindRangeNum(rangeId, numId, callback) {
+    const r = $(rangeId), n = $(numId);
+    r.addEventListener('input', e => { n.value = e.target.value; callback(e.target.value); });
+    n.addEventListener('change', e => { r.value = e.target.value; callback(e.target.value); });
+  }
+
+  bindRangeNum('dissipation','dissipation_num', v => { myFluid.PARAMS.dissipation = parseFloat(v); });
+  bindRangeNum('velocity','velocity_num', v => { myFluid.PARAMS.velocity = parseFloat(v); });
+  bindRangeNum('pressure','pressure_num', v => { myFluid.PARAMS.pressure = parseFloat(v); });
+  bindRangeNum('pressure_iter','pressure_iter_num', v => { myFluid.PARAMS.pressure_iteration = parseInt(v); });
+  bindRangeNum('curl','curl_num', v => { myFluid.PARAMS.curl = parseFloat(v); });
+  bindRangeNum('emitter_size','emitter_size_num', v => { myFluid.PARAMS.emitter_size = parseFloat(v); });
+  bindRangeNum('intensity','intensity_num', v => { myFluid.PARAMS.intensity = parseFloat(v); });
+  bindRangeNum('threshold','threshold_num', v => { myFluid.PARAMS.threshold = parseFloat(v); });
+  bindRangeNum('soft_knee','soft_knee_num', v => { myFluid.PARAMS.soft_knee = parseFloat(v); });
+
+  // Other checkboxes
+  $('render_shaders').addEventListener('change', e => { myFluid.PARAMS.render_shaders = !!e.target.checked; });
+  $('multi_color').addEventListener('change', e => { myFluid.PARAMS.multi_color = !!e.target.checked; });
+  $('render_bloom').addEventListener('change', e => { myFluid.PARAMS.render_bloom = !!e.target.checked; });
+
+  $('embedded_dither').addEventListener('change', e => { myFluid.PARAMS.embedded_dither = !!e.target.checked; });
+  $('paused').addEventListener('change', e => {
+    myFluid.PARAMS.paused = !!e.target.checked;
+    if (myFluid.togglePause) { // ha van helper
+      if (myFluid.PARAMS.paused) myFluid.pause && myFluid.pause();
+      else myFluid.play && myFluid.play();
+    }
+  });
+
+  // Colors palette -> set PARAMS.colorStops if supported by lib
+  function applyPalette() {
+    const colors = [ $('color1').value, $('color2').value, $('color3').value, $('color4').value ];
+    // convert to rgb objects if needed
+    const stops = colors.map(hex => toRGBObj(hex));
+    // Many forks/libs use different key names; try common ones:
+    if (myFluid.PARAMS) {
+      myFluid.PARAMS.colorStops = stops;
+      myFluid.PARAMS.customPalette = colors; // safe fallback
+    }
+    if (myFluid.setColorStops) myFluid.setColorStops(stops);
+  }
+  ['color1','color2','color3','color4'].forEach(id => $(id).addEventListener('input', applyPalette));
+  applyPalette();
+
+  // Background handling
+  $('bg_mode').addEventListener('change', () => {
+    $('bg_solid_row').style.display = 'none';
+    $('bg_gradient_row').style.display = 'none';
+    $('bg_image_row').style.display = 'none';
+    const v = $('bg_mode').value;
+    if (v === 'solid') $('bg_solid_row').style.display = 'flex';
+    if (v === 'gradient') $('bg_gradient_row').style.display = 'block';
+    if (v === 'image') $('bg_image_row').style.display = 'block';
+  });
+
+  $('apply_bg').addEventListener('click', () => {
+    const mode = $('bg_mode').value;
+    const transparent = $('transparent_bg').checked;
+    myFluid.PARAMS.transparent = transparent;
+    if (mode === 'solid') {
+      const c = toRGBObj($('bg_solid_color').value);
+      // README: fluid.applyBackground(mode, value, options)
+      myFluid.applyBackground && myFluid.applyBackground('solid', $('bg_solid_color').value, { transparent });
+      // also map behavior so it's persistent
+      myFluid.mapBehaviors && myFluid.mapBehaviors({ background_color: c, transparent });
+    } else if (mode === 'gradient') {
+      const value = $('bg_grad_value').value;
+      const type = $('bg_grad_type').value;
+      // pass a string like '#e66465, #9198e5' and type
+      myFluid.applyBackground && myFluid.applyBackground('gradient', value, type);
+      myFluid.mapBehaviors && myFluid.mapBehaviors({ background_gradient: value, background_gradient_type: type, transparent });
+    } else if (mode === 'image') {
+      const url = $('bg_image_url').value.trim();
+      if (url) {
+        myFluid.applyBackground && myFluid.applyBackground('image', url, { transparent });
+        myFluid.mapBehaviors && myFluid.mapBehaviors({ background_image: url, transparent });
+      } else {
+        alert('Adj meg egy kép URL-t!');
+      }
+    }
+  });
+
+  // Re-create / re-activate with mapping (useful for sim_resolution, dye_resolution changes)
+  $('recreate').addEventListener('click', () => {
+    const mapped = {
+      sim_resolution: parseInt($('sim_res').value),
+      dye_resolution: parseInt($('dye_res').value),
+
+      paused: !!$('paused').checked,
+      embedded_dither: !!$('embedded_dither').checked,
+
+      dissipation: parseFloat($('dissipation').value),
+      velocity: parseFloat($('velocity').value),
+      pressure: parseFloat($('pressure').value),
+      pressure_iteration: parseInt($('pressure_iter').value),
+      curl: parseFloat($('curl').value),
+      emitter_size: parseFloat($('emitter_size').value),
+
+      render_shaders: !!$('render_shaders').checked,
+      multi_color: !!$('multi_color').checked,
+      render_bloom: !!$('render_bloom').checked,
+      intensity: parseFloat($('intensity').value),
+      threshold: parseFloat($('threshold').value),
+      soft_knee: parseFloat($('soft_knee').value),
+      transparent: !!$('transparent_bg').checked
+    };
+
+    // apply palette to mapped config if supported
+    const colors = [ $('color1').value, $('color2').value, $('color3').value, $('color4').value ];
+    mapped.colorStops = colors.map(hex=>toRGBObj(hex));
+
+    // call mapBehaviors then (re)activate
+    if (myFluid.mapBehaviors) myFluid.mapBehaviors(mapped);
+    // Some implementations require deactivate/activate; attempt safe re-init:
+    try {
+      myFluid.deactivate && myFluid.deactivate();
+    } catch(e){}
+    try {
+      myFluid.activate && myFluid.activate();
+    } catch(e){
+      console.warn('activate error', e);
+    }
+  });
+
+  // Reset to defaults
+  $('reset').addEventListener('click', () => {
+    // Reset UI values
+    $('sim_res').value = defaultMap.sim_resolution; $('sim_res_val').textContent = defaultMap.sim_resolution;
+    $('dye_res').value = defaultMap.dye_resolution; $('dye_res_val').textContent = defaultMap.dye_resolution;
+    $('dissipation').value = defaultMap.dissipation; $('dissipation_num').value = defaultMap.dissipation;
+    $('velocity').value = defaultMap.velocity; $('velocity_num').value = defaultMap.velocity;
+    $('pressure').value = defaultMap.pressure; $('pressure_num').value = defaultMap.pressure;
+    $('pressure_iter').value = defaultMap.pressure_iteration; $('pressure_iter_num').value = defaultMap.pressure_iteration;
+    $('curl').value = defaultMap.curl; $('curl_num').value = defaultMap.curl;
+    $('emitter_size').value = defaultMap.emitter_size; $('emitter_size_num').value = defaultMap.emitter_size;
+    $('render_shaders').checked = defaultMap.render_shaders;
+    $('multi_color').checked = defaultMap.multi_color;
+    $('render_bloom').checked = defaultMap.render_bloom;
+    $('intensity').value = defaultMap.intensity; $('intensity_num').value = defaultMap.intensity;
+    $('threshold').value = defaultMap.threshold; $('threshold_num').value = defaultMap.threshold;
+    $('soft_knee').value = defaultMap.soft_knee; $('soft_knee_num').value = defaultMap.soft_knee;
+    $('bg_solid_color').value = '#0f0f0f';
+    $('color1').value = '#ff0040';
+    $('color2').value = '#00ffd5';
+    $('color3').value = '#fffb00';
+    $('color4').value = '#7a00ff';
+    $('paused').checked = defaultMap.paused;
+    $('embedded_dither').checked = defaultMap.embedded_dither;
+    $('transparent_bg').checked = defaultMap.transparent;
+    applyPalette();
+    // map behaviors & re-activate
+    if (myFluid.mapBehaviors) myFluid.mapBehaviors(Object.assign({}, defaultMap));
+    try { myFluid.deactivate && myFluid.deactivate(); } catch(e){}
+    try { myFluid.activate && myFluid.activate(); } catch(e){}
+  });
+
+  // A sim_resolution és dye_resolution UI-nak jelezzük, hogy változott (ha csak mozgatod a sávot, a re-create gombbal lehet érvényesíteni)
+  $('sim_res').addEventListener('change', () => {
+    // Warning hint (nem modal)
+    console.log('Figyelem: sim_resolution módosult — kattints "Újra-aktiválás" a hatás érvényesítéséhez');
+  });
+
+  // Kezdeti háttér alkalmazása (solid)
+  $('apply_bg').click();
+
+  // Extra: ha a lib támogatja a dinamikus PARAMS-t, akkor itt is feltesszük a kezdeti PARAMS objektumot
+  if (!myFluid.PARAMS) myFluid.PARAMS = {};
+  Object.assign(myFluid.PARAMS, defaultMap);
+
+  // Ha van resize helper, hívd meg
+  window.addEventListener('resize', () => {
+    try { myFluid.resize && myFluid.resize(); } catch(e){}
+  });
+
+  // Tipp: egyes Fluid-JS verziók nem exportálják ugyanazokat a metódusokat.
+  // Ha valami nem működik, nézd meg a konzolt és a README-t a repo-ban.
+  console.log('Fluid editor ready. Ha a sim_resolution vagy dye_resolution változik, használd az "Újra-aktiválás" gombot.');
+</script>
+</body>
+</html>

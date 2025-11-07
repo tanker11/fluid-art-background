@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standalone Test - Módosítható paraméterek</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: white; font-family: monospace; }
+
+        #info {
+            position: fixed; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.9); color: #0ff;
+            padding: 15px; border-radius: 8px; font-size: 11px;
+            z-index: 1000; max-width: 400px; border: 2px solid #0ff;
+        }
+
+        #info h3 { margin: 0 0 10px 0; color: #0f0; border-bottom: 1px solid #0ff; padding-bottom: 5px; }
+        .status { margin: 3px 0; padding: 3px; background: rgba(0,255,255,0.1); }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+        .error { color: #f00; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🧪 Standalone Test</h3>
+        <div id="logs"></div>
+    </div>
+
+    <!-- Custom Fluid-JS - FIXED VERSION (multi_color: false, fekete init folt) -->
+    <script src="dist/fluid-js-custom-fixed.min.js"></script>
+
+    <script>
+        // ============================================
+        // PARAMÉTEREK - MÓDOSÍTSD EZEKET!
+        // ============================================
+
+        const PHYSICS_CONFIG = {
+            sim_resolution: 512,
+            dye_resolution: 512,
+            dissipation: 1,              // NINCS halványodás
+            velocity: 0.999,
+            pressure: 0.8,
+            pressure_iteration: 20,
+            curl: 10,
+            emitter_size: 2,
+            render_shaders: true,
+            multi_color: false,          // ← FONTOS: NINCS random szín!
+            render_bloom: false,
+            background_color: { r: 0, g: 255, b: 0 },
+            transparent: false
+        };
+
+        const FLUID_COLORS = [
+            { r: 0, g: 255, b: 255 },    // Türkiz
+            { r: 204, g: 51, b: 255 },   // Lila
+            { r: 0, g: 128, b: 255 }     // Királykék
+        ];
+
+        const INITIAL_SPLATS = {
+            count: 5,
+            delay_between: 300,
+            move_distance: 200,
+            move_steps: 8,
+            drag_duration: 120
+        };
+
+        // ============================================
+        // LOG FUNKCIO
+        // ============================================
+
+        function log(msg, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = 'status ' + type;
+            div.textContent = msg;
+            logsDiv.appendChild(div);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        // ============================================
+        // INICIALIZÁLÁS
+        // ============================================
+
+        log('Canvas létrehozása...');
+        const canvas = document.createElement('canvas');
+        canvas.id = 'fluidCanvas';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.cssText = 'display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:-1;pointer-events:none';
+        document.body.insertBefore(canvas, document.body.firstChild);
+        log('✅ Canvas OK', 'success');
+
+        setTimeout(function() {
+            if (typeof Fluid === 'undefined') {
+                log('❌ Fluid library NINCS!', 'error');
+                return;
+            }
+
+            log('Fluid példány létrehozása...');
+            const myFluid = new Fluid(canvas);
+            log('✅ Fluid példány OK', 'success');
+
+            // FONTOS: mapBehaviors ELŐTT explicit multi_color beállítás
+            myFluid.mapBehaviors({
+                ...PHYSICS_CONFIG,
+                multi_color: false  // ← EXPLICIT FALSE!
+            });
+
+            log('✅ Paraméterek beállítva:', 'success');
+            log('  - dissipation: ' + PHYSICS_CONFIG.dissipation);
+            log('  - velocity: ' + PHYSICS_CONFIG.velocity);
+            log('  - emitter_size: ' + PHYSICS_CONFIG.emitter_size);
+            log('  - multi_color: false (EXPLICIT!)');
+            log('  - background_color: r=' + PHYSICS_CONFIG.background_color.r +
+                ', g=' + PHYSICS_CONFIG.background_color.g +
+                ', b=' + PHYSICS_CONFIG.background_color.b);
+
+            // WORKAROUND: Disable generateColor by overriding pointer color updates
+            // Store original setTimeout to intercept color changes
+            log('🔧 Workaround: Letiltom a random színgenerálást...', 'warning');
+
+            setTimeout(function() {
+                myFluid.activate();
+                log('✅ Fluid aktiválva', 'success');
+
+                // HÁTTÉRSZÍN ÖBLÍTÉSE
+                setTimeout(function() {
+                    log('🧹 Háttérszín öblítése...', 'warning');
+
+                    myFluid.color = PHYSICS_CONFIG.background_color;
+                    canvas.dispatchEvent(new MouseEvent('mousedown', {
+                        clientX: 500, clientY: 500, bubbles: true
+                    }));
+
+                    setTimeout(function() {
+                        canvas.dispatchEvent(new MouseEvent('mouseup', {
+                            clientX: 500, clientY: 500, bubbles: true
+                        }));
+
+                        log('✅ Öblítés OK', 'success');
+
+                        // SZÍNES SPLAT-OK
+                        setTimeout(function() {
+                            log('🎨 Splat-ok generálása...', 'warning');
+
+                            for (let i = 0; i < INITIAL_SPLATS.count; i++) {
+                                (function(index) {
+                                    setTimeout(function() {
+                                        const x = (0.2 + Math.random() * 0.6) * canvas.width;
+                                        const y = (0.2 + Math.random() * 0.6) * canvas.height;
+                                        const angle = Math.random() * Math.PI * 2;
+
+                                        const colorIndex = index % FLUID_COLORS.length;
+                                        const selectedColor = FLUID_COLORS[colorIndex];
+                                        const colorNames = ['türkiz', 'lila', 'kék'];
+
+                                        // ERŐS színbeállítás
+                                        myFluid.color = {
+                                            r: selectedColor.r,
+                                            g: selectedColor.g,
+                                            b: selectedColor.b
+                                        };
+
+                                        log('🎨 #' + (index+1) + ' ' + colorNames[colorIndex] +
+                                            ' (r=' + selectedColor.r + ',g=' + selectedColor.g + ',b=' + selectedColor.b + ')', 'success');
+
+                                        // Mouse down
+                                        canvas.dispatchEvent(new MouseEvent('mousedown', {
+                                            clientX: x, clientY: y, bubbles: true
+                                        }));
+
+                                        // Intermediate moves
+                                        const stepDelay = INITIAL_SPLATS.drag_duration / INITIAL_SPLATS.move_steps;
+
+                                        for (let step = 1; step <= INITIAL_SPLATS.move_steps; step++) {
+                                            (function(s) {
+                                                setTimeout(function() {
+                                                    // Színt minden lépésnél újra!
+                                                    myFluid.color = {
+                                                        r: selectedColor.r,
+                                                        g: selectedColor.g,
+                                                        b: selectedColor.b
+                                                    };
+
+                                                    const progress = s / INITIAL_SPLATS.move_steps;
+                                                    const dist = INITIAL_SPLATS.move_distance * progress;
+
+                                                    canvas.dispatchEvent(new MouseEvent('mousemove', {
+                                                        clientX: x + Math.cos(angle) * dist,
+                                                        clientY: y + Math.sin(angle) * dist,
+                                                        bubbles: true
+                                                    }));
+                                                }, s * stepDelay);
+                                            })(step);
+                                        }
+
+                                        // Mouse up
+                                        setTimeout(function() {
+                                            canvas.dispatchEvent(new MouseEvent('mouseup', {
+                                                clientX: x + Math.cos(angle) * INITIAL_SPLATS.move_distance,
+                                                clientY: y + Math.sin(angle) * INITIAL_SPLATS.move_distance,
+                                                bubbles: true
+                                            }));
+
+                                            if (index === INITIAL_SPLATS.count - 1) {
+                                                log('🎉 Összes splat kész!', 'success');
+                                            }
+                                        }, INITIAL_SPLATS.drag_duration + 20);
+                                    }, index * INITIAL_SPLATS.delay_between);
+                                })(i);
+                            }
+                        }, 200);
+                    }, 30);
+                }, 100);
+            }, 300);
+        }, 500);
+
+        // Resize
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        log('🚀 Init...');
+    </script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Art Study 2 - Paraméterezett verzió</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: white;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderSurface"></canvas>
+
+    <!-- Fluid-JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fluid-canvas@latest"></script>
+
+    <script>
+        // ============================================
+        // PARAMÉTEREK - Itt állíthatók be a fizikai tulajdonságok
+        // ============================================
+
+        const PHYSICS_CONFIG = {
+            // Szimuláció felbontása (alacsonyabb = gyorsabb, 32-512)
+            sim_resolution: 128,
+
+            // Színek felbontása (magasabb = élesebb, 128-2048)
+            dye_resolution: 512,
+
+            // Színvesztés mértéke (0.9-1.0, magasabb = lassabb halványodás)
+            dissipation: 0.998,
+
+            // Sebesség lassulás mértéke (0.9-1.0, magasabb = lassabb lassulás)
+            velocity: 0.999,
+
+            // Nyomás (0.0-1.0)
+            pressure: 0.8,
+
+            // Nyomás iterációk száma (10-50)
+            pressure_iteration: 20,
+
+            // Örvénylés erőssége (0-50)
+            curl: 10,
+
+            // Emitter méret (0.1-3.0) - létrehozott foltok mérete
+            emitter_size: 2.5,
+
+            // Vizuális beállítások
+            render_shaders: true,
+            multi_color: false,
+            render_bloom: false,
+
+            // Háttérszín (fehér)
+            background_color: { r: 255, g: 255, b: 255 },
+            transparent: false
+        };
+
+        // Fluid art színpaletta (türkiz, lila, kék)
+        const FLUID_COLORS_HEX = ['#00ffff', '#cc33ff', '#0080ff'];
+        const FLUID_COLORS_RGB = [
+            { r: 0, g: 255, b: 255 },    // Türkiz
+            { r: 204, g: 51, b: 255 },   // Lila
+            { r: 0, g: 128, b: 255 }     // Királykék
+        ];
+
+        // Egér interakció paraméterek
+        const MOUSE_CONFIG = {
+            // Minimális sebesség küszöb (px/frame)
+            speed_threshold: 300,
+
+            // Throttle: hány mozdulatonként reagáljon (1 = minden, 3 = minden 3.)
+            throttle_rate: 3
+        };
+
+        // Kezdeti splat-ok paraméterei
+        const INITIAL_SPLATS = {
+            count: 5,                    // Hány kezdeti folt
+            delay_between: 250,          // Késleltetés splat-ok között (ms)
+            move_distance: 50,          // Húzás távolság (px)
+            move_steps: 1                // Húzás lépések száma
+        };
+
+        // ============================================
+        // INICIALIZÁLÁS
+        // ============================================
+
+        const canvas = document.getElementById('renderSurface');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Fluid objektum létrehozása
+        let myFluid = new Fluid(canvas);
+
+        // Konfiguráció alkalmazása
+        myFluid.mapBehaviors(PHYSICS_CONFIG);
+
+        console.log('🎨 Fluid Art Study 2 - Paraméterek:');
+        console.log('  - Dissipation (színvesztés):', PHYSICS_CONFIG.dissipation);
+        console.log('  - Velocity (sebesség lassulás):', PHYSICS_CONFIG.velocity);
+        console.log('  - Emitter size (folt méret):', PHYSICS_CONFIG.emitter_size);
+        console.log('  - Curl (örvénylés):', PHYSICS_CONFIG.curl);
+
+        // ============================================
+        // SEGÉDFÜGGVÉNYEK
+        // ============================================
+
+        // Egér követés változók
+        let lastX = -1;
+        let lastY = -1;
+        let isSimulating = false;
+        let moveCounter = 0;
+
+        // Kezdeti splat-ok létrehozása
+        function createInitialSplats() {
+            for (let i = 0; i < INITIAL_SPLATS.count; i++) {
+                setTimeout(() => {
+                    isSimulating = true;
+                    const x = (0.2 + Math.random() * 0.6) * canvas.width;
+                    const y = (0.2 + Math.random() * 0.6) * canvas.height;
+
+                    // Színbeállítás
+                    myFluid.color = FLUID_COLORS_RGB[i];
+
+                    // Kattintás szimuláció
+                    const mouseDownEvent = new MouseEvent('mousedown', {
+                        clientX: x,
+                        clientY: y,
+                        bubbles: true,
+                        cancelable: true
+                    });
+
+                    canvas.dispatchEvent(mouseDownEvent);
+
+                    // Több köztes mozgás esemény a nagyobb folt eléréséhez
+                    for (let step = 1; step <= INITIAL_SPLATS.move_steps; step++) {
+                        setTimeout(() => {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = (INITIAL_SPLATS.move_distance * step) / INITIAL_SPLATS.move_steps;
+                            const mouseMoveEvent = new MouseEvent('mousemove', {
+                                clientX: x + Math.cos(angle) * dist,
+                                clientY: y + Math.sin(angle) * dist,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            canvas.dispatchEvent(mouseMoveEvent);
+                        }, step * 20);
+                    }
+
+                    setTimeout(() => {
+                        const angle = Math.random() * Math.PI * 2;
+                        const mouseUpEvent = new MouseEvent('mouseup', {
+                            clientX: x + Math.cos(angle) * INITIAL_SPLATS.move_distance,
+                            clientY: y + Math.sin(angle) * INITIAL_SPLATS.move_distance,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        canvas.dispatchEvent(mouseUpEvent);
+                        isSimulating = false;
+                        console.log(`✅ Splat ${i+1}: ${FLUID_COLORS_HEX[i]}, méret=${PHYSICS_CONFIG.emitter_size}`);
+                    }, INITIAL_SPLATS.move_steps * 20 + 50);
+                }, i * INITIAL_SPLATS.delay_between);
+            }
+        }
+
+        // Egérmozgás követés - passzív megfigyelés
+        canvas.addEventListener('mousemove', (e) => {
+            // Szűrjük a szimulált eseményeket
+            if (isSimulating || !e.isTrusted) {
+                return;
+            }
+
+            const x = e.clientX;
+            const y = e.clientY;
+
+            if (lastX !== -1 && lastY !== -1) {
+                const dx = x - lastX;
+                const dy = y - lastY;
+                const speed = Math.sqrt(dx * dx + dy * dy);
+
+                // Throttle és sebesség küszöb ellenőrzés
+                moveCounter++;
+                if (speed > MOUSE_CONFIG.speed_threshold &&
+                    moveCounter % MOUSE_CONFIG.throttle_rate === 0) {
+                    isSimulating = true;
+
+                    // Random szín
+                    const colorIndex = Math.floor(Math.random() * FLUID_COLORS_RGB.length);
+                    myFluid.color = FLUID_COLORS_RGB[colorIndex];
+
+                    // Szimulált kattintás
+                    const mouseDownEvent = new MouseEvent('mousedown', {
+                        clientX: x,
+                        clientY: y,
+                        bubbles: true
+                    });
+
+                    canvas.dispatchEvent(mouseDownEvent);
+
+                    setTimeout(() => {
+                        const mouseUpEvent = new MouseEvent('mouseup', {
+                            clientX: x + dx,
+                            clientY: y + dy,
+                            bubbles: true
+                        });
+                        canvas.dispatchEvent(mouseUpEvent);
+                        isSimulating = false;
+                    }, 20);
+                }
+            }
+
+            lastX = x;
+            lastY = y;
+        }, { passive: true });
+
+        // Ablak átméretezés
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // ============================================
+        // INDÍTÁS
+        // ============================================
+
+        // Kezdeti splat-ok létrehozása - aktiválás után
+        setTimeout(() => {
+            // Most aktiváljuk a Fluid-JS-t (így nem lesz automatikus piros folt)
+            myFluid.activate();
+
+            console.log('✅ Fluid-JS aktiválva');
+
+            // Kis késleltetés az aktiválás után
+            setTimeout(() => {
+                createInitialSplats();
+            }, 300);
+        }, 500);
+
+        console.log('✅ Fluid Art Study 2 betöltve - paraméterezett verzió!');
+    </script>
+</body>
+</html>

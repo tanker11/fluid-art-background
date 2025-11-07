@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Fluid-JS Build - Test (createSplat API)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: black; font-family: 'Courier New', monospace; }
+
+        #info {
+            position: fixed; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.95); color: #0ff;
+            padding: 20px; border-radius: 10px; font-size: 12px;
+            z-index: 1000; max-width: 500px; border: 2px solid #0ff;
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        #info h3 {
+            margin: 0 0 15px 0; color: #0f0; font-size: 16px;
+            border-bottom: 1px solid #0ff; padding-bottom: 8px;
+        }
+
+        .param {
+            margin: 5px 0; padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .param strong { color: #ff0; }
+
+        .log-entry {
+            margin: 3px 0; padding: 3px;
+            font-size: 11px; line-height: 1.4;
+        }
+
+        .log-success { color: #0f0; }
+        .log-warning { color: #ff0; }
+        .log-error { color: #f00; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🧪 Custom Fluid-JS Build Test (PARAMETERIZED)</h3>
+        <div class="param"><strong>Build:</strong> dist/fluid-js-custom-final.min.js (41.1 KB)</div>
+        <div class="param"><strong>Multi Color:</strong> false (defaults.js)</div>
+        <div class="param"><strong>Init Splat:</strong> NINCS (initializer.js)</div>
+        <div class="param"><strong>API:</strong> createSplat() (fluid.js)</div>
+        <div class="param"><strong>Config:</strong> ANIMATION_CONFIG objektum (script elején)</div>
+        <div class="param"><strong>Háttér:</strong> Fekete (r:0, g:0, b:0)</div>
+        <div class="param"><strong>Fizika:</strong> sim_res=512, dissipation=1, velocity=0.999, curl=10, emitter_size=2.0</div>
+
+        <div class="param" style="margin-top: 10px; border-top: 1px solid #0ff; padding-top: 10px;">
+            <strong>Testreszabási pontok (ANIMATION_CONFIG):</strong><br>
+            • timing: scriptLoadDelay, fluidInitDelay, splatCreationDelay<br>
+            • canvas: zIndex, pointerEvents, position<br>
+            • fluidBehavior: ÖSSZES fizikai paraméter (sim_resolution, dissipation, velocity, pressure, curl, emitter_size, bloom, stb.)<br>
+            • animation: velocityMultiplier (sebesség szabályozás)<br>
+            • colors: RGB színpaletta (21 szín - alap, hideg, meleg, zöld, pastel)<br>
+            • initialSplats: x, y, dx, dy, radius, delay, colorIndex
+        </div>
+
+        <div class="param" style="margin-top: 10px; border-top: 1px solid #ff0; padding-top: 10px; background: rgba(255,255,0,0.1);">
+            <strong>💾 Preset Manager (Console API):</strong><br>
+            <em style="color: #0ff;">LocalStorage preset-ek:</em><br>
+            • PresetManager.save("név") - Aktuális konfig mentése<br>
+            • <strong>PresetManager.apply("név")</strong> - Preset betöltése ÉS alkalmazása<br>
+            • PresetManager.list() - Összes preset listázása<br>
+            • PresetManager.delete("név") - Preset törlése<br>
+            <br>
+            <em style="color: #0f0;">💾 Fájl alapú (AJÁNLOTT):</em><br>
+            • <strong>PresetManager.exportToFile()</strong> - JSON fájl letöltése<br>
+            • <strong>PresetManager.importFromFile()</strong> - JSON fájl feltöltése<br>
+            <br>
+            <em style="color: #888;">String alapú (fallback):</em><br>
+            • PresetManager.export() - JSON console-ba<br>
+            • PresetManager.import(json) - JSON string-ből
+        </div>
+
+        <h3 style="margin-top: 15px;">Console Log:</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // LOGGING
+        // ============================================
+
+        function log(msg, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = 'log-entry log-' + type;
+            div.textContent = msg;
+            logsDiv.appendChild(div);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        log('🚀 Script betöltve', 'success');
+    </script>
+
+    <!-- FONTOS: Custom Fluid-JS Build (FINAL verzió) -->
+    <!-- Tartalmazza: defaults.js módosítások + createSplat() API + nincs init splat -->
+
+    <script src="dist/fluid-js-custom-final.min.js"></script>
+
+    <script>
+        // ============================================
+        // KONFIGURÁCIÓS OBJEKTUM - ANIMÁCIÓS PARAMÉTEREK
+        // ============================================
+
+        const ANIMATION_CONFIG = {
+            // Időzítések (milliszekundum)
+            timing: {
+                scriptLoadDelay: 500,        // Fluid library betöltése után várakozás
+                fluidInitDelay: 500,         // Fluid activate() után várakozás
+                splatCreationDelay: 500,     // createSplat() elérhetőség előtti várakozás
+            },
+
+            // Canvas beállítások
+            canvas: {
+                zIndex: -1,
+                pointerEvents: 'none',
+                position: 'fixed'
+            },
+
+            // Fluid Behavior paraméterek - TELJES FIZIKAI KONFIGURÁCIÓ
+            // Ezek OVERRIDE-olják a defaults.js értékeit a mapBehaviors() híváson keresztül
+            fluidBehavior: {
+                // Felbontás (GPU texture quality)
+                sim_resolution: 256,        // 32-512 (magasabb = jobb minőség, lassabb)
+                dye_resolution: 512,        // 128-2048 (szín felbontás)
+
+                // Dissipation (halványodás, lassulás)
+                dissipation: 1.000,             // 0.9-1.0 (1 = nincs halványodás)
+                velocity: 0.999,            // 0.9-1.0 (mozgás lassulása)
+
+                // Pressure (nyomás szimuláció)
+                pressure: 0.6,              // 0.0-1.0
+                pressure_iteration: 20,     // 10-50 (iterációk száma)
+
+                // Curl (örvénylés erőssége)
+                curl: 5,                   // 0-50 (magasabb = több örvény)
+
+                // Splat tulajdonságok
+                emitter_size: 1.0,          // 0.1-3.0 (splat alapméret) NEM HASZNÁLT!
+
+                // Vizuális beállítások
+                render_shaders: true,       // true/false (shader renderelés)
+                multi_color: false,         // true/false (random színek)
+                render_bloom: false,        // true/false (fény effekt)
+
+                // Bloom paraméterek (ha render_bloom: true)
+                bloom_iterations: 8,
+                bloom_resolution: 256,
+                intensity: 0.8,
+                threshold: 0.6,
+                soft_knee: 0.7,
+
+                // Háttér
+                background_color: { r: 0, g: 0, b: 0 },  // Fekete háttér
+                transparent: false          // true/false (átlátszó háttér)
+            },
+
+            // Animáció sebesség szabályozás
+            animation: {
+                velocityMultiplier: 1.0     // Globális sebesség szorzó (0.1 = lassú, 2.0 = gyors)
+            },
+
+            // Színpaletta
+            // FONTOS: A fluid szimuláció additív (hozzáadó) színkeverést használ!
+            // Ez azt jelenti, hogy r:0, g:0, b:0 (tiszta fekete) hozzáadva bármihez
+            // nem változtat semmit (0 + valami = valami).
+            // Ezért "fekete" helyett nagyon sötét szürke (5, 5, 5) ajánlott.
+            colors: [
+                // Alap színek
+                { r: 5, g: 5, b: 5 },         // 0: Nagyon sötét szürke (pszeudo-fekete)
+                { r: 255, g: 255, b: 255 },   // 1: Fehér
+
+                // Hideg színek (türkiz, kék, lila árnyalatok)
+                { r: 0, g: 255, b: 255 },     // 2: Türkiz (cyan)
+                { r: 0, g: 200, b: 255 },     // 3: Égszínkék
+                { r: 0, g: 128, b: 255 },     // 4: Királykék
+                { r: 100, g: 150, b: 255 },   // 5: Lágy kék
+                { r: 204, g: 51, b: 255 },    // 6: Élénk lila
+                { r: 180, g: 100, b: 255 },   // 7: Levendula
+                { r: 255, g: 0, b: 255 },     // 8: Magenta
+
+                // Meleg színek (pink, korall, narancs, arany árnyalatok)
+                { r: 255, g: 105, b: 180 },   // 9: Rózsaszín (hot pink)
+                { r: 255, g: 150, b: 200 },   // 10: Lágy pink
+                { r: 255, g: 127, b: 80 },    // 11: Korall
+                { r: 255, g: 165, b: 0 },     // 12: Narancs
+                { r: 255, g: 215, b: 0 },     // 13: Arany
+                { r: 255, g: 255, b: 100 },   // 14: Citromsárga
+
+                // Zöld árnyalatok
+                { r: 0, g: 255, b: 150 },     // 15: Mentazöld
+                { r: 50, g: 255, b: 100 },    // 16: Smaragdzöld
+                { r: 150, g: 255, b: 150 },   // 17: Lágy zöld
+
+                // Pastel árnyalatok (fluid art kedvencek)
+                { r: 200, g: 230, b: 255 },   // 18: Pasztell kék
+                { r: 255, g: 200, b: 230 },   // 19: Pasztell pink
+                { r: 230, g: 200, b: 255 }    // 20: Pasztell lila
+            ],
+
+            // Kezdeti splat-ok konfigurációja
+            initialSplats: [
+                {
+                    colorIndex: 6,           // Élénk lila
+                    x: 0.5, y: 0.5,
+                    dx: 70, dy: 10,
+                    radius: 5.5,
+                    delay: 0
+                },
+                {
+                    colorIndex: 2,           // Türkiz
+                    x: 0.3, y: 0.5,
+                    dx: 50, dy: -20,
+                    radius: 5.5,
+                    delay: 1200
+                },
+                {
+                    colorIndex: 6,           // Élénk lila
+                    x: 0.1, y: 0.3,
+                    dx: 200, dy: -100,
+                    radius: 6.0,
+                    delay: 2800
+                },
+                {
+                    colorIndex: 13,           // Türkiz
+                    x: 0.1, y: 0.3,
+                    dx: 300, dy: 50,
+                    radius: 6.0,
+                    delay: 5000
+                }
+            ]
+        };
+
+        // Backward compatibility: FLUID_COLORS és INITIAL_SPLATS generálása config-ból
+        const FLUID_COLORS = ANIMATION_CONFIG.colors;
+        const INITIAL_SPLATS = ANIMATION_CONFIG.initialSplats.map(function(splat) {
+            return {
+                color: ANIMATION_CONFIG.colors[splat.colorIndex],
+                x: splat.x,
+                y: splat.y,
+                dx: splat.dx * ANIMATION_CONFIG.animation.velocityMultiplier,
+                dy: splat.dy * ANIMATION_CONFIG.animation.velocityMultiplier,
+                radius: splat.radius,
+                delay: splat.delay
+            };
+        });
+
+        // ============================================
+        // CANVAS LÉTREHOZÁSA
+        // ============================================
+
+        log('Canvas létrehozása...');
+        const canvas = document.createElement('canvas');
+        canvas.id = 'fluidArtCanvas';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.cssText = 'display:block;width:100vw;height:100vh;' +
+            'position:' + ANIMATION_CONFIG.canvas.position + ';' +
+            'top:0;left:0;' +
+            'z-index:' + ANIMATION_CONFIG.canvas.zIndex + ';' +
+            'pointer-events:' + ANIMATION_CONFIG.canvas.pointerEvents;
+        document.body.insertBefore(canvas, document.body.firstChild);
+        log('✅ Canvas OK', 'success');
+
+        // ============================================
+        // FLUID INICIALIZÁLÁS
+        // ============================================
+
+        setTimeout(function() {
+            if (typeof Fluid === 'undefined') {
+                log('❌ Fluid library NINCS!', 'error');
+                return;
+            }
+
+            log('Fluid példány létrehozása...', 'warning');
+            const myFluid = new Fluid(canvas);
+            log('✅ Fluid példány OK', 'success');
+
+            // Explicit override (config alapján)
+            myFluid.mapBehaviors(ANIMATION_CONFIG.fluidBehavior);
+
+            log('Fluid aktiválása...', 'warning');
+            myFluid.activate();
+            log('✅ Fluid aktiválva', 'success');
+
+            // VÁRUNK, hogy a fluid teljesen inicializálódjon (config timing)
+            setTimeout(function() {
+                log('🎨 Splat-ok generálása (createSplat API)...', 'warning');
+
+                // ELLENŐRZÉS: createSplat() metódus elérhető?
+                if (typeof myFluid.createSplat !== 'function') {
+                    log('❌ HIBA: createSplat() metódus NEM elérhető!', 'error');
+                    log('Ez azt jelenti, hogy a custom build NEM működött.', 'error');
+                    return;
+                } else {
+                    log('✅ createSplat() metódus elérhető', 'success');
+                }
+
+                // SPLAT-OK GENERÁLÁSA ÚJ API-VAL
+                INITIAL_SPLATS.forEach(function(splatConfig, index) {
+                    setTimeout(function() {
+                        try {
+                            myFluid.createSplat({
+                                color: splatConfig.color,
+                                x: splatConfig.x,
+                                y: splatConfig.y,
+                                dx: splatConfig.dx,
+                                dy: splatConfig.dy,
+                                radius: splatConfig.radius
+                            });
+
+                            const colorNames = ['türkiz', 'lila', 'királykék'];
+                            log('🎨 Splat #' + (index + 1) + ' - ' + colorNames[index] +
+                                ' (r=' + splatConfig.color.r + ',g=' + splatConfig.color.g + ',b=' + splatConfig.color.b + ')', 'success');
+                        } catch (error) {
+                            log('❌ HIBA splat létrehozáskor: ' + error.message, 'error');
+                        }
+                    }, splatConfig.delay);
+                });
+
+                log('✅ Összes splat ütemezve', 'success');
+            }, ANIMATION_CONFIG.timing.splatCreationDelay);
+        }, ANIMATION_CONFIG.timing.scriptLoadDelay);
+
+        // ============================================
+        // PRESET KEZELŐ RENDSZER (LocalStorage)
+        // ============================================
+
+        const PresetManager = {
+            // Preset mentése
+            save: function(name) {
+                try {
+                    const preset = {
+                        name: name,
+                        timestamp: new Date().toISOString(),
+                        config: ANIMATION_CONFIG  // CSAK az ANIMATION_CONFIG objektum (clean)
+                    };
+                    localStorage.setItem('fluidArtPreset_' + name, JSON.stringify(preset));
+                    log('💾 Preset mentve: ' + name, 'success');
+                    return true;
+                } catch (error) {
+                    log('❌ Preset mentési hiba: ' + error.message, 'error');
+                    return false;
+                }
+            },
+
+            // Preset betöltése
+            load: function(name) {
+                try {
+                    const presetData = localStorage.getItem('fluidArtPreset_' + name);
+                    if (!presetData) {
+                        log('❌ Preset nem található: ' + name, 'error');
+                        return null;
+                    }
+                    const preset = JSON.parse(presetData);
+                    log('📂 Preset betöltve: ' + name + ' (mentve: ' + preset.timestamp + ')', 'success');
+
+                    // Betöltött konfiguráció kiírása (csak a főbb részek)
+                    console.log('🔍 Betöltött konfiguráció:', preset.config);
+                    console.log('  • timing:', preset.config.timing);
+                    console.log('  • fluidBehavior:', preset.config.fluidBehavior);
+                    console.log('  • animation:', preset.config.animation);
+                    console.log('  • initialSplats (db):', preset.config.initialSplats.length);
+
+                    return preset.config;
+                } catch (error) {
+                    log('❌ Preset betöltési hiba: ' + error.message, 'error');
+                    return null;
+                }
+            },
+
+            // Összes preset listázása
+            list: function() {
+                const presets = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('fluidArtPreset_')) {
+                        const name = key.replace('fluidArtPreset_', '');
+                        presets.push(name);
+                    }
+                }
+                return presets;
+            },
+
+            // Preset törlése
+            delete: function(name) {
+                try {
+                    localStorage.removeItem('fluidArtPreset_' + name);
+                    log('🗑️ Preset törölve: ' + name, 'warning');
+                    return true;
+                } catch (error) {
+                    log('❌ Preset törlési hiba: ' + error.message, 'error');
+                    return false;
+                }
+            },
+
+            // Aktuális konfiguráció exportálása JSON-ként (console-ba)
+            export: function() {
+                // JSON.stringify automatikusan kihagyja a függvényeket és csak az adatokat tartalmazza
+                const jsonString = JSON.stringify(ANIMATION_CONFIG, null, 2);
+
+                // Console-ba OLVASHATÓ formában kiírás (nem %c, hanem tiszta JSON objektum)
+                console.log('📤 EXPORTÁLT KONFIGURÁCIÓ (másold ki a console-ból):');
+                console.log('');
+                console.log('═══════════════════════════════════════════════════════════');
+                // Objektum formában (collapse-olható, másolható)
+                console.log(ANIMATION_CONFIG);
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('');
+                console.log('📋 JSON STRING (másold ki Ctrl+C):');
+                // String formában is kiírjuk tisztán (másolható)
+                console.log(jsonString);
+                console.log('');
+
+                log('📤 Export kész! Nyisd ki a console-t, kattints a JSON objektumra jobb gombbal → Copy object, vagy másold ki a JSON string-et!', 'success');
+                log('💡 AJÁNLOTT: Használd a exportToFile() függvényt fájl letöltéshez!', 'warning');
+
+                return jsonString;
+            },
+
+            // Konfiguráció exportálása FÁJLBA (letöltés)
+            exportToFile: function(filename) {
+                try {
+                    if (!filename) {
+                        filename = 'fluid-art-config-' + new Date().toISOString().replace(/:/g, '-').split('.')[0] + '.json';
+                    }
+
+                    const jsonString = JSON.stringify(ANIMATION_CONFIG, null, 2);
+
+                    // Blob létrehozása (fájl tartalom)
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+
+                    // Letöltési link létrehozása
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+
+                    // Cleanup
+                    setTimeout(function() {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+
+                    log('💾 Konfiguráció fájlba exportálva: ' + filename, 'success');
+                    console.log('📂 Fájl név:', filename);
+                    console.log('📏 Fájl méret:', (jsonString.length / 1024).toFixed(2), 'KB');
+
+                    return true;
+                } catch (error) {
+                    log('❌ Fájl export hiba: ' + error.message, 'error');
+                    console.error('Stack trace:', error);
+                    return false;
+                }
+            },
+
+            // Konfiguráció importálása JSON string-ből (ÉS ALKALMAZÁSA!)
+            import: function(jsonString) {
+                try {
+                    console.log('📥 Import indítása (string alapú)...');
+                    console.log('📋 Beérkezett JSON hossza:', jsonString.length, 'karakter');
+
+                    const config = JSON.parse(jsonString);
+
+                    console.log('✅ JSON parsing sikeres');
+                    console.log('📋 Importált konfiguráció:', config);
+
+                    // Jelenlegi konfiguráció mentése összehasonlításhoz
+                    const oldConfig = {
+                        timing: JSON.parse(JSON.stringify(ANIMATION_CONFIG.timing)),
+                        fluidBehavior: JSON.parse(JSON.stringify(ANIMATION_CONFIG.fluidBehavior)),
+                        animation: JSON.parse(JSON.stringify(ANIMATION_CONFIG.animation)),
+                        initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                    };
+
+                    console.log('📋 Jelenlegi konfiguráció (import előtt):', oldConfig);
+
+                    // DEEP MERGE - Minden nested property frissítése (ugyanaz, mint apply())
+                    // TIMING
+                    if (config.timing) {
+                        Object.assign(ANIMATION_CONFIG.timing, config.timing);
+                    }
+
+                    // CANVAS
+                    if (config.canvas) {
+                        Object.assign(ANIMATION_CONFIG.canvas, config.canvas);
+                    }
+
+                    // FLUID BEHAVIOR (LEGFONTOSABB!)
+                    if (config.fluidBehavior) {
+                        Object.assign(ANIMATION_CONFIG.fluidBehavior, config.fluidBehavior);
+                    }
+
+                    // ANIMATION
+                    if (config.animation) {
+                        Object.assign(ANIMATION_CONFIG.animation, config.animation);
+                    }
+
+                    // COLORS (teljes csere, mert array)
+                    if (config.colors) {
+                        ANIMATION_CONFIG.colors = config.colors;
+                    }
+
+                    // INITIAL SPLATS (teljes csere, mert array)
+                    if (config.initialSplats) {
+                        ANIMATION_CONFIG.initialSplats = config.initialSplats;
+                    }
+
+                    console.log('✅ ANIMATION_CONFIG frissítve importált adatokkal');
+                    console.log('📋 Új konfiguráció (import után):', {
+                        timing: ANIMATION_CONFIG.timing,
+                        fluidBehavior: ANIMATION_CONFIG.fluidBehavior,
+                        animation: ANIMATION_CONFIG.animation,
+                        initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                    });
+
+                    // ÖSSZEHASONLÍTÁS
+                    console.log('🔀 VÁLTOZÁSOK:');
+                    console.log('  timing:', JSON.stringify(oldConfig.timing) !== JSON.stringify(ANIMATION_CONFIG.timing) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  fluidBehavior:', JSON.stringify(oldConfig.fluidBehavior) !== JSON.stringify(ANIMATION_CONFIG.fluidBehavior) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  animation:', JSON.stringify(oldConfig.animation) !== JSON.stringify(ANIMATION_CONFIG.animation) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  initialSplats:', oldConfig.initialSplatsCount !== ANIMATION_CONFIG.initialSplats.length ? 'VÁLTOZOTT ✓ (' + oldConfig.initialSplatsCount + ' → ' + ANIMATION_CONFIG.initialSplats.length + ')' : 'változatlan');
+
+                    log('📥 Konfiguráció importálva és alkalmazva! (oldal újratöltés ajánlott a teljes hatásért)', 'success');
+                    return true;
+                } catch (error) {
+                    log('❌ Import hiba: ' + error.message, 'error');
+                    console.error('Stack trace:', error);
+                    console.log('💡 Ellenőrizd, hogy helyes JSON formátumot másoltál be!');
+                    console.log('💡 AJÁNLOTT: Használd a importFromFile() függvényt fájl feltöltéshez!');
+                    return false;
+                }
+            },
+
+            // Konfiguráció importálása FÁJLBÓL (feltöltés)
+            importFromFile: function() {
+                // File input elem létrehozása (rejtett)
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json,.json';
+                input.style.display = 'none';
+                document.body.appendChild(input);
+
+                // File select event handler
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        log('❌ Nincs kiválasztott fájl', 'error');
+                        document.body.removeChild(input);
+                        return;
+                    }
+
+                    console.log('📂 Fájl kiválasztva:', file.name);
+                    console.log('📏 Fájl méret:', (file.size / 1024).toFixed(2), 'KB');
+
+                    // FileReader használata fájl tartalom olvasásához
+                    const reader = new FileReader();
+
+                    reader.onload = function(event) {
+                        try {
+                            const jsonString = event.target.result;
+
+                            console.log('📥 Fájl beolvasva, JSON parsing...');
+                            const config = JSON.parse(jsonString);
+
+                            console.log('✅ JSON parsing sikeres');
+                            console.log('📋 Importált konfiguráció:', config);
+
+                            // Jelenlegi konfiguráció mentése összehasonlításhoz
+                            const oldConfig = {
+                                timing: JSON.parse(JSON.stringify(ANIMATION_CONFIG.timing)),
+                                fluidBehavior: JSON.parse(JSON.stringify(ANIMATION_CONFIG.fluidBehavior)),
+                                animation: JSON.parse(JSON.stringify(ANIMATION_CONFIG.animation)),
+                                initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                            };
+
+                            console.log('📋 Jelenlegi konfiguráció (import előtt):', oldConfig);
+
+                            // DEEP MERGE - Minden nested property frissítése
+                            // TIMING
+                            if (config.timing) {
+                                Object.assign(ANIMATION_CONFIG.timing, config.timing);
+                            }
+
+                            // CANVAS
+                            if (config.canvas) {
+                                Object.assign(ANIMATION_CONFIG.canvas, config.canvas);
+                            }
+
+                            // FLUID BEHAVIOR (LEGFONTOSABB!)
+                            if (config.fluidBehavior) {
+                                Object.assign(ANIMATION_CONFIG.fluidBehavior, config.fluidBehavior);
+                            }
+
+                            // ANIMATION
+                            if (config.animation) {
+                                Object.assign(ANIMATION_CONFIG.animation, config.animation);
+                            }
+
+                            // COLORS (teljes csere, mert array)
+                            if (config.colors) {
+                                ANIMATION_CONFIG.colors = config.colors;
+                            }
+
+                            // INITIAL SPLATS (teljes csere, mert array)
+                            if (config.initialSplats) {
+                                ANIMATION_CONFIG.initialSplats = config.initialSplats;
+                            }
+
+                            console.log('✅ ANIMATION_CONFIG frissítve fájlból importált adatokkal');
+                            console.log('📋 Új konfiguráció (import után):', {
+                                timing: ANIMATION_CONFIG.timing,
+                                fluidBehavior: ANIMATION_CONFIG.fluidBehavior,
+                                animation: ANIMATION_CONFIG.animation,
+                                initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                            });
+
+                            // ÖSSZEHASONLÍTÁS
+                            console.log('🔀 VÁLTOZÁSOK:');
+                            console.log('  timing:', JSON.stringify(oldConfig.timing) !== JSON.stringify(ANIMATION_CONFIG.timing) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                            console.log('  fluidBehavior:', JSON.stringify(oldConfig.fluidBehavior) !== JSON.stringify(ANIMATION_CONFIG.fluidBehavior) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                            console.log('  animation:', JSON.stringify(oldConfig.animation) !== JSON.stringify(ANIMATION_CONFIG.animation) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                            console.log('  initialSplats:', oldConfig.initialSplatsCount !== ANIMATION_CONFIG.initialSplats.length ? 'VÁLTOZOTT ✓ (' + oldConfig.initialSplatsCount + ' → ' + ANIMATION_CONFIG.initialSplats.length + ')' : 'változatlan');
+
+                            log('📥 Konfiguráció fájlból importálva és alkalmazva! (' + file.name + ')', 'success');
+                            log('⚠️ Oldal újratöltés ajánlott a teljes hatásért (F5)', 'warning');
+
+                            // Cleanup
+                            document.body.removeChild(input);
+                        } catch (error) {
+                            log('❌ Fájl import hiba: ' + error.message, 'error');
+                            console.error('Stack trace:', error);
+                            console.log('💡 Ellenőrizd, hogy a fájl helyes JSON formátumot tartalmaz!');
+                            document.body.removeChild(input);
+                        }
+                    };
+
+                    reader.onerror = function() {
+                        log('❌ Fájl olvasási hiba', 'error');
+                        document.body.removeChild(input);
+                    };
+
+                    // Fájl tartalom olvasása text-ként
+                    reader.readAsText(file);
+                });
+
+                // File picker megnyitása
+                input.click();
+                log('📂 Fájl választó megnyitva... Válassz egy .json fájlt!', 'warning');
+            },
+
+            // Betöltött preset alkalmazása (ÉRVÉNYRE JUTTATÁS)
+            apply: function(name) {
+                try {
+                    console.log('🔄 Apply() meghívva:', name);
+
+                    // Jelenlegi konfiguráció mentése összehasonlításhoz
+                    const oldConfig = {
+                        timing: JSON.parse(JSON.stringify(ANIMATION_CONFIG.timing)),
+                        fluidBehavior: JSON.parse(JSON.stringify(ANIMATION_CONFIG.fluidBehavior)),
+                        animation: JSON.parse(JSON.stringify(ANIMATION_CONFIG.animation)),
+                        initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                    };
+
+                    console.log('📋 Jelenlegi konfiguráció (apply előtt):', oldConfig);
+
+                    const loadedConfig = this.load(name);
+                    if (!loadedConfig) {
+                        log('❌ Nem sikerült betölteni a preset-et: ' + name, 'error');
+                        return false;
+                    }
+
+                    // DEEP MERGE - Minden nested property frissítése
+                    // TIMING
+                    Object.assign(ANIMATION_CONFIG.timing, loadedConfig.timing);
+
+                    // CANVAS
+                    Object.assign(ANIMATION_CONFIG.canvas, loadedConfig.canvas);
+
+                    // FLUID BEHAVIOR (LEGFONTOSABB!)
+                    Object.assign(ANIMATION_CONFIG.fluidBehavior, loadedConfig.fluidBehavior);
+
+                    // ANIMATION
+                    Object.assign(ANIMATION_CONFIG.animation, loadedConfig.animation);
+
+                    // COLORS (teljes csere, mert array)
+                    ANIMATION_CONFIG.colors = loadedConfig.colors;
+
+                    // INITIAL SPLATS (teljes csere, mert array)
+                    ANIMATION_CONFIG.initialSplats = loadedConfig.initialSplats;
+
+                    console.log('✅ ANIMATION_CONFIG frissítve');
+                    console.log('📋 Új konfiguráció (apply után):', {
+                        timing: ANIMATION_CONFIG.timing,
+                        fluidBehavior: ANIMATION_CONFIG.fluidBehavior,
+                        animation: ANIMATION_CONFIG.animation,
+                        initialSplatsCount: ANIMATION_CONFIG.initialSplats.length
+                    });
+
+                    // ÖSSZEHASONLÍTÁS
+                    console.log('🔀 VÁLTOZÁSOK:');
+                    console.log('  timing:', JSON.stringify(oldConfig.timing) !== JSON.stringify(ANIMATION_CONFIG.timing) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  fluidBehavior:', JSON.stringify(oldConfig.fluidBehavior) !== JSON.stringify(ANIMATION_CONFIG.fluidBehavior) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  animation:', JSON.stringify(oldConfig.animation) !== JSON.stringify(ANIMATION_CONFIG.animation) ? 'VÁLTOZOTT ✓' : 'változatlan');
+                    console.log('  initialSplats:', oldConfig.initialSplatsCount !== ANIMATION_CONFIG.initialSplats.length ? 'VÁLTOZOTT ✓ (' + oldConfig.initialSplatsCount + ' → ' + ANIMATION_CONFIG.initialSplats.length + ')' : 'változatlan');
+
+                    log('⚡ Preset alkalmazva: ' + name + ' (oldal újratöltés ajánlott a teljes hatásért)', 'warning');
+                    return true;
+                } catch (error) {
+                    log('❌ Preset alkalmazási hiba: ' + error.message, 'error');
+                    console.error('Stack trace:', error);
+                    return false;
+                }
+            }
+        };
+
+        // Globális scope-ba helyezés (console hozzáféréshez)
+        window.PresetManager = PresetManager;
+
+        log('✅ Preset Manager inicializálva', 'success');
+        log('💡 Használat:', 'warning');
+        log('  • PresetManager.save("preset_neve") - Jelenlegi konfiguráció mentése (localStorage)', 'info');
+        log('  • PresetManager.apply("preset_neve") - Preset betöltése ÉS alkalmazása', 'info');
+        log('  • PresetManager.list() - Mentett preset-ek listázása', 'info');
+        log('  • PresetManager.delete("preset_neve") - Preset törlése', 'info');
+        log('', 'info');
+        log('  💾 FÁJL ALAPÚ (AJÁNLOTT):', 'warning');
+        log('  • PresetManager.exportToFile() - JSON fájl letöltése (automatikus fájlnév)', 'info');
+        log('  • PresetManager.exportToFile("custom.json") - JSON fájl letöltése (egyedi fájlnév)', 'info');
+        log('  • PresetManager.importFromFile() - JSON fájl feltöltése és alkalmazása', 'info');
+        log('', 'info');
+        log('  📋 STRING ALAPÚ (fallback):', 'warning');
+        log('  • PresetManager.export() - Konfiguráció JSON exportálása (console-ba)', 'info');
+        log('  • PresetManager.import(jsonString) - JSON string importálása', 'info');
+
+        // ============================================
+        // RESIZE HANDLER
+        // ============================================
+
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        log('✅ Resize handler hozzáadva', 'success');
+    </script>
+</body>
+</html>

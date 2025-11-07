@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fehér Festék Öblítés Teszt - Piros Folt Eltüntetése</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        .debug-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #00ffff;
+            font-size: 14px;
+        }
+
+        .debug-item {
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 3px solid #00ffff;
+        }
+
+        .debug-item.success {
+            border-left-color: #00ff00;
+        }
+
+        .debug-item.error {
+            border-left-color: #ff0000;
+            color: #ff6666;
+        }
+
+        .debug-item.warning {
+            border-left-color: #ffaa00;
+            color: #ffcc66;
+        }
+
+        .test-content {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            margin: 40px auto;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 800px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.success {
+            background: #4CAF50;
+        }
+
+        .info-box {
+            background: rgba(103, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        ul {
+            line-height: 1.8;
+        }
+
+        .timeline {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+        }
+
+        .timeline-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #667eea;
+            background: white;
+        }
+
+        .timeline-item strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug panel -->
+    <div class="debug-panel" id="debugPanel">
+        <h3>🔍 Debug Console</h3>
+        <div id="debugLog"></div>
+    </div>
+
+    <!-- Test tartalom -->
+    <div class="test-content">
+        <h1>🧹 Fehér Festék Öblítés <span class="badge success">Piros folt fix</span></h1>
+
+        <div class="info-box">
+            <strong>✅ Megoldás:</strong><br>
+            Fehér festék (255, 255, 255) öblítése a piros folt (500, 500) pozíciójára, így az fehér háttéren láthatatlanná válik.
+        </div>
+
+        <p><strong>Időzítési stratégia:</strong></p>
+        <div class="timeline">
+            <div class="timeline-item">
+                <strong>t=0ms:</strong> activate() hívás → piros folt generálódik (500, 500)
+            </div>
+            <div class="timeline-item">
+                <strong>t=100ms:</strong> Fehér festék öblítés (500, 500) → piros folt elnyomva
+            </div>
+            <div class="timeline-item">
+                <strong>t=300ms:</strong> Türkiz splat #1 (véletlenszerű pozíció)
+            </div>
+            <div class="timeline-item">
+                <strong>t=500ms:</strong> Lila splat #2 (véletlenszerű pozíció)
+            </div>
+            <div class="timeline-item">
+                <strong>t=700ms:</strong> Királykék splat #3 (véletlenszerű pozíció)
+            </div>
+        </div>
+
+        <p><strong>Elvárt viselkedés:</strong></p>
+        <ul>
+            <li>✅ <strong>Piros folt láthatatlan</strong> (fehérrel elnyomva)</li>
+            <li>✅ <strong>3 színes folt</strong> jelenik meg (türkiz, lila, királykék)</li>
+            <li>✅ <strong>Nagyobb amplitúdó</strong> (1500px, 15%-a = 225px mozgás)</li>
+            <li>✅ <strong>Erősebb húzás</strong> (80ms mousedown-mouseup)</li>
+        </ul>
+
+        <p><strong>Teszteld:</strong></p>
+        <ul>
+            <li>Várd meg az oldal betöltését (~1 másodperc)</li>
+            <li>Nézd a jobb felső sarokban a debug konzolt</li>
+            <li>Ellenőrizd: Látszik-e piros folt? (NEM kellene!)</li>
+            <li>Mozgasd az egeret - új színes foltok jelennek meg</li>
+            <li>F12 → Console - részletes időzítési logok</li>
+        </ul>
+
+        <div class="info-box" style="border-left-color: #4CAF50; background: rgba(76, 175, 80, 0.1);">
+            <strong>🎯 Forrás elemzés:</strong><br>
+            A piros folt forrása megtalálva az eredeti Fluid-JS kódban:<br>
+            <code>src/initializer.js:284</code> - multipleSplats() hívás<br>
+            <code>src/initializer.js:694-703</code> - hardcoded piros szín {r:255, g:0, b:0}
+        </div>
+    </div>
+
+    <!-- Fluid-JS UNAS integráció kód (TELJES) -->
+    <script>
+        // Debug logging függvény
+        function debugLog(message, type = 'info') {
+            const debugPanel = document.getElementById('debugLog');
+            const item = document.createElement('div');
+            item.className = `debug-item ${type}`;
+            const timestamp = new Date().toLocaleTimeString('hu-HU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+            item.textContent = `[${timestamp}] ${message}`;
+            debugPanel.appendChild(item);
+
+            // Automatikus scroll
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+
+            // Console is
+            if (type === 'error') {
+                console.error(message);
+            } else if (type === 'success') {
+                console.log('✅ ' + message);
+            } else if (type === 'warning') {
+                console.warn('⚠️ ' + message);
+            } else {
+                console.log(message);
+            }
+        }
+
+        // =============================================================================
+        // FLUID-JS UNAS INTEGRÁCIÓ - FEHÉR FESTÉK ÖBLÍTÉS
+        // =============================================================================
+        (function(){
+            debugLog('Script indítása...', 'info');
+
+            // 1. GLOBÁLIS CANVAS LÉTREHOZÁSA
+            window.canvas = document.createElement('canvas');
+            window.canvas.id = 'renderSurface';
+            window.canvas.width = window.innerWidth;
+            window.canvas.height = window.innerHeight;
+            window.canvas.style.cssText = 'display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:-1';
+            document.body.insertBefore(window.canvas, document.body.firstChild);
+            debugLog('Canvas létrehozva: ' + window.canvas.width + 'x' + window.canvas.height, 'success');
+
+            // 2. FLUID-JS CDN BETÖLTÉSE
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/fluid-canvas@latest';
+            debugLog('Fluid-JS CDN betöltése...', 'info');
+
+            script.onload = function() {
+                debugLog('Fluid-JS CDN betöltve', 'success');
+
+                // ELSŐ TIMEOUT: 500ms várakozás
+                setTimeout(function() {
+                    if (typeof Fluid === 'undefined') {
+                        debugLog('Fluid library nem elérhető!', 'error');
+                        return;
+                    }
+
+                    var canvasElement = document.getElementById('renderSurface');
+                    debugLog('Canvas elem lekérve: #renderSurface', 'success');
+
+                    try {
+                        // 3. FLUID PÉLDÁNY LÉTREHOZÁSA
+                        var myFluid = new Fluid(canvasElement);
+                        debugLog('Fluid példány létrehozva', 'success');
+
+                        // 4. FLUID PARAMÉTEREK BEÁLLÍTÁSA
+                        myFluid.mapBehaviors({
+                            sim_resolution: 128,
+                            dye_resolution: 512,
+                            dissipation: 0.98,
+                            velocity: 0.99,
+                            pressure: 0.8,
+                            pressure_iteration: 20,
+                            curl: 30,
+                            emitter_size: 0.5,
+                            render_shaders: true,
+                            multi_color: false,
+                            render_bloom: false,
+                            background_color: { r: 255, g: 255, b: 255 },
+                            transparent: false
+                        });
+                        debugLog('Fluid paraméterek beállítva', 'success');
+
+                        // MÁSODIK TIMEOUT: 300ms várakozás
+                        setTimeout(function() {
+                            // 5. ANIMÁCIÓ AKTIVÁLÁSA (Ez generálja a piros foltot!)
+                            debugLog('⚠️ activate() hívás - piros folt generálódik...', 'warning');
+                            myFluid.activate();
+                            debugLog('Fluid aktiválva', 'success');
+
+                            // 5.5. PIROS FOLT ELTÜNTETÉSE (KRITIKUS!)
+                            setTimeout(function() {
+                                debugLog('🧹 Fehér festék öblítés indítása...', 'warning');
+
+                                // Fehér szín beállítása
+                                myFluid.color = { r: 255, g: 255, b: 255 };
+
+                                // Nagy fehér folt generálása a piros folt fölé (500, 500 pozíció)
+                                canvasElement.dispatchEvent(new MouseEvent('mousedown', {
+                                    clientX: 500,
+                                    clientY: 500,
+                                    bubbles: true
+                                }));
+
+                                setTimeout(function() {
+                                    canvasElement.dispatchEvent(new MouseEvent('mouseup', {
+                                        clientX: 500,
+                                        clientY: 500,
+                                        bubbles: true
+                                    }));
+                                    debugLog('✅ Fehér festék felhordva (500, 500) - piros folt elnyomva', 'success');
+                                }, 30);
+                            }, 100);
+
+                            // 6. KEZDETI SPLAT-OK GENERÁLÁSA
+                            var initialColors = [
+                                { r: 0, g: 255, b: 255 },           // Türkiz
+                                { r: 204, g: 51, b: 255 },          // Lila
+                                { r: 0, g: 128, b: 255 }            // Királykék
+                            ];
+                            var colorNames = ['Türkiz', 'Lila', 'Királykék'];
+
+                            debugLog('Színes splat-ok generálása (300ms-500ms-700ms)...', 'info');
+
+                            for (var i = 0; i < 3; i++) {
+                                (function(index) {
+                                    setTimeout(function() {
+                                        var x = (0.2 + Math.random() * 0.6) * window.innerWidth;
+                                        var y = (0.2 + Math.random() * 0.6) * window.innerHeight;
+                                        var dx = (Math.random() - 0.5) * 1500;
+                                        var dy = (Math.random() - 0.5) * 1500;
+
+                                        myFluid.color = initialColors[index];
+                                        debugLog(`🎨 Splat #${index + 1} (${colorNames[index]}) @ (${Math.round(x)}, ${Math.round(y)})`, 'success');
+
+                                        canvasElement.dispatchEvent(new MouseEvent('mousedown', {
+                                            clientX: x,
+                                            clientY: y,
+                                            bubbles: true
+                                        }));
+
+                                        setTimeout(function() {
+                                            canvasElement.dispatchEvent(new MouseEvent('mouseup', {
+                                                clientX: x + dx * 0.15,
+                                                clientY: y + dy * 0.15,
+                                                bubbles: true
+                                            }));
+                                        }, 80);
+                                    }, 300 + index * 200);
+                                })(i);
+                            }
+
+                            // 7. EGÉRKÖVETÉS VÁLTOZÓI
+                            var lastX = -1, lastY = -1;
+                            var moveCounter = 0;
+                            var isSimulating = false;
+
+                            // 8. SZÍNPALETTA
+                            var colors = [
+                                { r: 0, g: 255, b: 255 },
+                                { r: 204, g: 51, b: 255 },
+                                { r: 0, g: 128, b: 255 }
+                            ];
+
+                            // 9. EGÉRMOZGÁS ESEMÉNYKEZELŐ
+                            canvasElement.addEventListener('mousemove', function(e) {
+                                if (isSimulating || !e.isTrusted) return;
+
+                                var x = e.clientX, y = e.clientY;
+
+                                if (lastX !== -1 && lastY !== -1) {
+                                    var dx = x - lastX;
+                                    var dy = y - lastY;
+                                    var speed = Math.sqrt(dx * dx + dy * dy);
+
+                                    moveCounter++;
+
+                                    if (speed > 3 && moveCounter % 3 === 0) {
+                                        isSimulating = true;
+
+                                        myFluid.color = colors[Math.floor(Math.random() * 3)];
+
+                                        canvasElement.dispatchEvent(new MouseEvent('mousedown', {
+                                            clientX: x,
+                                            clientY: y,
+                                            bubbles: true
+                                        }));
+
+                                        setTimeout(function() {
+                                            canvasElement.dispatchEvent(new MouseEvent('mouseup', {
+                                                clientX: x + dx,
+                                                clientY: y + dy,
+                                                bubbles: true
+                                            }));
+                                            isSimulating = false;
+                                        }, 20);
+                                    }
+                                }
+
+                                lastX = x;
+                                lastY = y;
+                            }, {passive: true});
+
+                            debugLog('Egérmozgás eseménykezelő aktiválva', 'success');
+                            debugLog('✅ INICIALIZÁLÁS KÉSZ - Mozgasd az egeret!', 'success');
+
+                        }, 300);
+
+                    } catch (error) {
+                        debugLog('Hiba: ' + error.message, 'error');
+                        console.error('Stack trace:', error.stack);
+                    }
+                }, 500);
+            };
+
+            script.onerror = function() {
+                debugLog('Fluid-JS CDN betöltési hiba!', 'error');
+            };
+
+            document.head.appendChild(script);
+        })();
+    </script>
+</body>
+</html>

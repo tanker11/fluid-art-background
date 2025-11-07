@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Fluid-JS Build Teszt - Fehér Folt</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        .debug-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #00ffff;
+            font-size: 14px;
+        }
+
+        .debug-item {
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 3px solid #00ffff;
+        }
+
+        .debug-item.success {
+            border-left-color: #00ff00;
+        }
+
+        .debug-item.error {
+            border-left-color: #ff0000;
+            color: #ff6666;
+        }
+
+        .test-content {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            margin: 40px auto;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 800px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .info-box {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        ul {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug panel -->
+    <div class="debug-panel" id="debugPanel">
+        <h3>🔍 Debug Console</h3>
+        <div id="debugLog"></div>
+    </div>
+
+    <!-- Test tartalom -->
+    <div class="test-content">
+        <h1>✅ Custom Fluid-JS Build <span class="badge">Fehér folt</span></h1>
+
+        <div class="info-box">
+            <strong>✅ Build sikeres!</strong><br>
+            A Fluid-JS <code>initializer.js</code> módosítva: <code>multipleSplats()</code> színe most <strong>fehér (255, 255, 255)</strong>
+        </div>
+
+        <p><strong>Mit tesztelsz:</strong></p>
+        <ul>
+            <li>✅ <strong>Lokális custom build</strong> - <code>dist/fluid-js-custom.min.js</code> (39.5 KB)</li>
+            <li>✅ <strong>Fehér folt inicializáláskor</strong> - fehér háttéren láthatatlan!</li>
+            <li>✅ <strong>3 színes splat</strong> - türkiz, lila, királykék (300ms-500ms-700ms)</li>
+            <li>✅ <strong>Egérmozgás interakció</strong> - kattintás nélkül működik</li>
+        </ul>
+
+        <p><strong>Teszteld:</strong></p>
+        <ul>
+            <li>Várd meg az oldal betöltését (~1 másodperc)</li>
+            <li>Figyeld a debug konzolt (jobb felső sarok)</li>
+            <li>Ellenőrizd: Látszik-e <strong>piros</strong> folt? (NEM kellene!)</li>
+            <li>Mozgasd az egeret - színes foltok jelennek meg</li>
+        </ul>
+
+        <div class="info-box">
+            <strong>📦 Fájl méret:</strong><br>
+            <code>dist/fluid-js-custom.min.js</code> - 39.5 KB<br>
+            (Eredeti CDN: ~100 KB - Ez az ES6 transpilált + minified verzió)
+        </div>
+    </div>
+
+    <!-- LOKÁLIS Custom Fluid-JS betöltése -->
+    <script src="dist/fluid-js-custom.min.js"></script>
+
+    <script>
+        // Debug logging
+        function debugLog(message, type = 'info') {
+            const debugPanel = document.getElementById('debugLog');
+            const item = document.createElement('div');
+            item.className = `debug-item ${type}`;
+            const timestamp = new Date().toLocaleTimeString('hu-HU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+            item.textContent = `[${timestamp}] ${message}`;
+            debugPanel.appendChild(item);
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+
+            if (type === 'error') {
+                console.error(message);
+            } else if (type === 'success') {
+                console.log('✅ ' + message);
+            } else {
+                console.log(message);
+            }
+        }
+
+        debugLog('Custom Fluid-JS build betöltése...', 'info');
+
+        // ELSŐ TIMEOUT: 500ms várakozás
+        setTimeout(function() {
+            if (typeof Fluid === 'undefined') {
+                debugLog('Fluid library nem elérhető!', 'error');
+                return;
+            }
+
+            debugLog('Custom Fluid library betöltve!', 'success');
+
+            // Canvas létrehozása
+            window.canvas = document.createElement('canvas');
+            window.canvas.id = 'renderSurface';
+            window.canvas.width = window.innerWidth;
+            window.canvas.height = window.innerHeight;
+            window.canvas.style.cssText = 'display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-index:-1';
+            document.body.insertBefore(window.canvas, document.body.firstChild);
+            debugLog('Canvas létrehozva', 'success');
+
+            var canvasElement = document.getElementById('renderSurface');
+
+            try {
+                var myFluid = new Fluid(canvasElement);
+                debugLog('Fluid példány létrehozva', 'success');
+
+                myFluid.mapBehaviors({
+                    sim_resolution: 128,
+                    dye_resolution: 512,
+                    dissipation: 0.98,
+                    velocity: 0.99,
+                    pressure: 0.8,
+                    pressure_iteration: 20,
+                    curl: 30,
+                    emitter_size: 0.5,
+                    render_shaders: true,
+                    multi_color: false,
+                    render_bloom: false,
+                    background_color: { r: 255, g: 255, b: 255 },
+                    transparent: false
+                });
+                debugLog('Fluid paraméterek beállítva', 'success');
+
+                // MÁSODIK TIMEOUT: 300ms várakozás
+                setTimeout(function() {
+                    myFluid.activate();
+                    debugLog('✅ Fluid aktiválva - fehér folt inicializálva!', 'success');
+
+                    // Színes splat-ok generálása
+                    var initialColors = [
+                        { r: 0, g: 255, b: 255 },           // Türkiz
+                        { r: 204, g: 51, b: 255 },          // Lila
+                        { r: 0, g: 128, b: 255 }            // Királykék
+                    ];
+                    var colorNames = ['Türkiz', 'Lila', 'Királykék'];
+
+                    for (var i = 0; i < 3; i++) {
+                        (function(index) {
+                            setTimeout(function() {
+                                var x = (0.2 + Math.random() * 0.6) * window.innerWidth;
+                                var y = (0.2 + Math.random() * 0.6) * window.innerHeight;
+                                var dx = (Math.random() - 0.5) * 1500;
+                                var dy = (Math.random() - 0.5) * 1500;
+
+                                myFluid.color = initialColors[index];
+                                debugLog(`🎨 Splat #${index + 1} (${colorNames[index]}) generálása`, 'success');
+
+                                canvasElement.dispatchEvent(new MouseEvent('mousedown', {
+                                    clientX: x,
+                                    clientY: y,
+                                    bubbles: true
+                                }));
+
+                                setTimeout(function() {
+                                    canvasElement.dispatchEvent(new MouseEvent('mouseup', {
+                                        clientX: x + dx * 0.15,
+                                        clientY: y + dy * 0.15,
+                                        bubbles: true
+                                    }));
+                                }, 80);
+                            }, 300 + index * 200);
+                        })(i);
+                    }
+
+                    // Egérmozgás eseménykezelő
+                    var lastX = -1, lastY = -1, moveCounter = 0, isSimulating = false;
+                    var colors = [
+                        { r: 0, g: 255, b: 255 },
+                        { r: 204, g: 51, b: 255 },
+                        { r: 0, g: 128, b: 255 }
+                    ];
+
+                    canvasElement.addEventListener('mousemove', function(e) {
+                        if (isSimulating || !e.isTrusted) return;
+                        var x = e.clientX, y = e.clientY;
+                        if (lastX !== -1 && lastY !== -1) {
+                            var dx = x - lastX, dy = y - lastY;
+                            var speed = Math.sqrt(dx * dx + dy * dy);
+                            moveCounter++;
+                            if (speed > 3 && moveCounter % 3 === 0) {
+                                isSimulating = true;
+                                myFluid.color = colors[Math.floor(Math.random() * 3)];
+                                canvasElement.dispatchEvent(new MouseEvent('mousedown', {clientX: x, clientY: y, bubbles: true}));
+                                setTimeout(function() {
+                                    canvasElement.dispatchEvent(new MouseEvent('mouseup', {clientX: x + dx, clientY: y + dy, bubbles: true}));
+                                    isSimulating = false;
+                                }, 20);
+                            }
+                        }
+                        lastX = x; lastY = y;
+                    }, {passive: true});
+
+                    debugLog('✅ INICIALIZÁLÁS KÉSZ - Mozgasd az egeret!', 'success');
+                }, 300);
+
+            } catch (error) {
+                debugLog('Hiba: ' + error.message, 'error');
+                console.error('Stack trace:', error.stack);
+            }
+        }, 500);
+    </script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+// src/fluid-background.js - Particle effect alapú fluid art háttér
+(function() {
+    'use strict';
+
+    class FluidBackground {
+        constructor(options = {}) {
+            this.options = {
+                containerId: options.containerId || 'fluid-background',
+                numberOfParticles: options.numberOfParticles || 300,
+                mouseRadius: options.mouseRadius || 200
+            };
+
+            this.canvas = null;
+            this.ctx = null;
+            this.particles = [];
+            this.animationId = null;
+
+            this.mouse = {
+                x: 0,
+                y: 0,
+                pressed: false,
+                radius: this.options.mouseRadius
+            };
+
+            this.init();
+        }
+
+        init() {
+            // Container létrehozása vagy megkeresése
+            let container = document.getElementById(this.options.containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = this.options.containerId;
+                document.body.insertBefore(container, document.body.firstChild);
+            }
+
+            // Stílusok beállítása
+            this.setupStyles(container);
+
+            // Canvas létrehozása
+            this.setupCanvas(container);
+
+            // Gradiens beállítása - FEHÉR ALAPON TÜRKIZ, LILA, KÖZÉPKÉK
+            this.setupGradient();
+
+            // Részecskék létrehozása
+            this.createParticles();
+
+            // Event listenerek
+            this.setupEventListeners();
+
+            // Animáció indítása
+            this.animate();
+        }
+
+        setupStyles(container) {
+            const styles = `
+                #${this.options.containerId} {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    z-index: -1;
+                    overflow: hidden;
+                    pointer-events: none;
+                }
+
+                #${this.options.containerId} canvas {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: white;
+                    filter: blur(7px) contrast(20);
+                }
+            `;
+
+            if (!document.getElementById('fluid-bg-styles')) {
+                const styleSheet = document.createElement('style');
+                styleSheet.id = 'fluid-bg-styles';
+                styleSheet.textContent = styles;
+                document.head.appendChild(styleSheet);
+            }
+        }
+
+        setupCanvas(container) {
+            this.canvas = document.createElement('canvas');
+            this.ctx = this.canvas.getContext('2d');
+            container.appendChild(this.canvas);
+            this.resizeCanvas();
+        }
+
+        setupGradient() {
+            // FEHÉR ALAPON TÜRKIZ, LILA, KÖZÉPKÉK FOLTOK
+            const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+            gradient.addColorStop(0, '#00CED1');    // Türkiz
+            gradient.addColorStop(0.5, '#9370DB');  // Középlila
+            gradient.addColorStop(1, '#4169E1');    // Királykék (középkék)
+            this.ctx.fillStyle = gradient;
+            this.ctx.strokeStyle = '#00CED1'; // Türkiz stroke
+        }
+
+        resizeCanvas() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.setupGradient();
+        }
+
+        createParticles() {
+            this.particles = [];
+            for (let i = 0; i < this.options.numberOfParticles; i++) {
+                this.particles.push(new Particle(this));
+            }
+        }
+
+        setupEventListeners() {
+            // Resize handler
+            window.addEventListener('resize', () => {
+                this.resizeCanvas();
+                this.particles.forEach(particle => particle.reset());
+            });
+
+            // Mouse move handler
+            window.addEventListener('mousemove', (e) => {
+                if (this.mouse.pressed) {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                }
+            });
+
+            // Mouse down handler
+            window.addEventListener('mousedown', (e) => {
+                this.mouse.pressed = true;
+                this.mouse.x = e.clientX;
+                this.mouse.y = e.clientY;
+            });
+
+            // Mouse up handler
+            window.addEventListener('mouseup', () => {
+                this.mouse.pressed = false;
+            });
+        }
+
+        handleParticles() {
+            this.connectParticles();
+            this.particles.forEach(particle => {
+                particle.draw(this.ctx);
+                particle.update();
+            });
+        }
+
+        connectParticles() {
+            const maxDistance = 80;
+            for (let a = 0; a < this.particles.length; a++) {
+                for (let b = a; b < this.particles.length; b++) {
+                    const dx = this.particles[a].x - this.particles[b].x;
+                    const dy = this.particles[a].y - this.particles[b].y;
+                    const distance = Math.hypot(dx, dy);
+
+                    if (distance < maxDistance) {
+                        this.ctx.save();
+                        const opacity = 1 - (distance / maxDistance);
+                        this.ctx.globalAlpha = opacity;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.particles[a].x, this.particles[a].y);
+                        this.ctx.lineTo(this.particles[b].x, this.particles[b].y);
+                        this.ctx.stroke();
+                        this.ctx.restore();
+                    }
+                }
+            }
+        }
+
+        animate() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.handleParticles();
+            this.animationId = requestAnimationFrame(() => this.animate());
+        }
+
+        destroy() {
+            if (this.animationId) {
+                cancelAnimationFrame(this.animationId);
+            }
+            if (this.canvas && this.canvas.parentNode) {
+                this.canvas.parentNode.removeChild(this.canvas);
+            }
+        }
+    }
+
+    class Particle {
+        constructor(effect) {
+            this.effect = effect;
+            this.radius = Math.floor(Math.random() * 15 + 10);
+            this.x = this.radius + Math.random() * (this.effect.canvas.width - this.radius * 2);
+            this.y = this.radius + Math.random() * (this.effect.canvas.height - this.radius * 2);
+            this.vx = Math.random() * 1 - 0.5;
+            this.vy = Math.random() * 1 - 0.5;
+            this.pushX = 0;
+            this.pushY = 0;
+            this.friction = 0.95;
+        }
+
+        draw(context) {
+            context.beginPath();
+            context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            context.fill();
+        }
+
+        update() {
+            if (this.effect.mouse.pressed) {
+                const dx = this.x - this.effect.mouse.x;
+                const dy = this.y - this.effect.mouse.y;
+                const distance = Math.hypot(dx, dy);
+                const force = this.effect.mouse.radius / distance;
+
+                if (distance < this.effect.mouse.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    this.pushX += Math.cos(angle) * force;
+                    this.pushY += Math.sin(angle) * force;
+                }
+            }
+
+            this.x += (this.pushX *= this.friction) + this.vx;
+            this.y += (this.pushY *= this.friction) + this.vy;
+
+            // Boundaries
+            if (this.x < this.radius) {
+                this.x = this.radius;
+                this.vx *= -1;
+            } else if (this.x > this.effect.canvas.width - this.radius) {
+                this.x = this.effect.canvas.width - this.radius;
+                this.vx *= -1;
+            }
+
+            if (this.y < this.radius) {
+                this.y = this.radius;
+                this.vy *= -1;
+            } else if (this.y > this.effect.canvas.height - this.radius) {
+                this.y = this.effect.canvas.height - this.radius;
+                this.vy *= -1;
+            }
+        }
+
+        reset() {
+            this.x = this.radius + Math.random() * (this.effect.canvas.width - this.radius * 2);
+            this.y = this.radius + Math.random() * (this.effect.canvas.height - this.radius * 2);
+        }
+    }
+
+    // Globális elérhetőség biztosítása
+    window.FluidBackground = FluidBackground;
+
+    // Automatikus inicializálás
+    document.addEventListener('DOMContentLoaded', () => {
+        const autoInit = document.querySelector('[data-fluid-background]');
+        if (autoInit) {
+            const options = autoInit.dataset.fluidBackground ?
+                JSON.parse(autoInit.dataset.fluidBackground) : {};
+            new FluidBackground(options);
+        }
+    });
+})();

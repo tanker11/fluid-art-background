@@ -1,0 +1,39 @@
+{
+  "name": "fluid-canvas",
+  "version": "0.9.4",
+  "description": "A JavaScript library that allows for easy deployment of WebGL rendered fluid simulations.",
+  "main": "lib/fluid.js",
+  "scripts": {
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malik-tillman/Fluid-JS.git"
+  },
+  "keywords": [
+    "WebGL",
+    "Canvas",
+    "Fluid",
+    "Simulation",
+    "JavaScript"
+  ],
+  "author": "Malik Tillman",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/malik-tillman/Fluid-JS/issues"
+  },
+  "homepage": "https://github.com/malik-tillman/Fluid-JS#readme",
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "file-loader": "^6.2.0",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "babel-loader": "^8.0.6",
+    "npm": "^6.10.2"
+  }
+}
