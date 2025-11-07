@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNAS Deployment Test - Fluid Art Background</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background: black;
+            font-family: 'Courier New', monospace;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.95);
+            color: #0ff;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 600px;
+            border: 2px solid #0ff;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #info h3 {
+            margin: 0 0 15px 0;
+            color: #0f0;
+            font-size: 16px;
+            border-bottom: 1px solid #0ff;
+            padding-bottom: 8px;
+        }
+
+        .param {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .param strong { color: #ff0; }
+
+        .section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #0ff;
+        }
+
+        .highlight {
+            background: rgba(255, 255, 0, 0.1);
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ff0;
+        }
+
+        .code {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            margin: 5px 0;
+            color: #0f0;
+        }
+    </style>
+
+    <!-- ============================================ -->
+    <!-- HEAD SECTION - Custom Fluid-JS Build (41.3 KB) -->
+    <!-- UNAS-BA: Ezt másold be a HEAD részbe (vagy tárold külső fájlként) -->
+    <!-- ============================================ -->
+    <script src="dist/fluid-js-custom-final.min.js"></script>
+</head>
+<body>
+    <div id="info">
+        <h3>🚀 UNAS Deployment Test</h3>
+
+        <div class="param"><strong>Build Struktúra:</strong> 2 részes (HEAD + BODY END)</div>
+        <div class="param"><strong>HEAD:</strong> fluid-js-custom-final.min.js (41.3 KB)</div>
+        <div class="param"><strong>BODY END:</strong> unas-inject-config.js</div>
+
+        <div class="section">
+            <h3>📋 UNAS Beillesztési Útmutató</h3>
+
+            <div class="highlight">
+                <strong>1. HEAD section (JavaScript)</strong><br>
+                UNAS Admin → Megjelenés → JavaScript/CSS → HEAD<br>
+                <div class="code">
+                    &lt;script src="https://CDN_URL/fluid-js-custom-final.min.js"&gt;&lt;/script&gt;
+                </div>
+                VAGY inline:<br>
+                <div class="code">
+                    &lt;script&gt;<br>
+                    // dist/fluid-js-custom-final.min.js TELJES tartalma<br>
+                    &lt;/script&gt;
+                </div>
+            </div>
+
+            <div class="highlight">
+                <strong>2. BODY END section (Paraméterek)</strong><br>
+                UNAS Admin → Megjelenés → JavaScript/CSS → BODY END<br>
+                <div class="code">
+                    &lt;script&gt;<br>
+                    // dist/unas-inject-config.js TELJES tartalma<br>
+                    &lt;/script&gt;
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🔧 Paraméter Módosítási Workflow</h3>
+            <div class="param">
+                <strong>1.</strong> Módosítsd a <code>dist/unas-inject-config.js</code> CONFIG objektumot<br>
+                <strong>2.</strong> Nyisd meg ezt a tesztet (test-unas-deployment.html)<br>
+                <strong>3.</strong> Ellenőrizd a Console-t (F12)<br>
+                <strong>4.</strong> Ha rendben, másold be az UNAS BODY END részébe<br>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>✅ Testreszabható Paraméterek</h3>
+            <div class="param">
+                • <strong>timing</strong>: scriptLoadDelay, fluidInitDelay, splatCreationDelay<br>
+                • <strong>canvas</strong>: zIndex, pointerEvents, position<br>
+                • <strong>fluidBehavior</strong>: sim_resolution, dissipation, velocity, curl, stb.<br>
+                • <strong>animation</strong>: velocityMultiplier<br>
+                • <strong>colors</strong>: 21 szín RGB értékek<br>
+                • <strong>initialSplats</strong>: colorIndex, x, y, dx, dy, radius, delay
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Lokális vs. UNAS Különbség</h3>
+            <div class="param">
+                <strong>Lokális (ez a fájl):</strong><br>
+                &lt;script src="<span style="color: #ff0;">dist/fluid-js-custom-final.min.js</span>"&gt;&lt;/script&gt;<br>
+                <br>
+                <strong>UNAS HEAD:</strong><br>
+                &lt;script src="<span style="color: #0f0;">https://CDN_URL/fluid-js-custom-final.min.js</span>"&gt;&lt;/script&gt;<br>
+                vagy inline script tag-gel
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📦 Fájlok</h3>
+            <div class="param">
+                ✅ <strong>dist/fluid-js-custom-final.min.js</strong> (41.3 KB) - Custom build<br>
+                ✅ <strong>dist/unas-inject-config.js</strong> - Paraméterkezelő<br>
+                ✅ <strong>test-unas-deployment.html</strong> - Ez a teszt fájl
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Console Log:</h3>
+            <div id="console-logs" style="font-size: 11px; color: #0f0;"></div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- BODY END SECTION - Paraméterkezelő -->
+    <!-- UNAS-BA: Ezt másold be a BODY END részébe -->
+    <!-- ============================================ -->
+    <script src="dist/unas-inject-config.js"></script>
+
+    <!-- Console log capturing (csak teszt célra) -->
+    <script>
+        (function() {
+            var consoleDiv = document.getElementById('console-logs');
+            var originalLog = console.log;
+            var originalWarn = console.warn;
+            var originalError = console.error;
+
+            function addLog(msg, type) {
+                var div = document.createElement('div');
+                div.style.margin = '3px 0';
+                div.style.color = type === 'error' ? '#f00' : (type === 'warning' ? '#ff0' : '#0f0');
+                div.textContent = msg;
+                consoleDiv.appendChild(div);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+
+            console.log = function() {
+                originalLog.apply(console, arguments);
+                addLog(Array.from(arguments).join(' '), 'info');
+            };
+
+            console.warn = function() {
+                originalWarn.apply(console, arguments);
+                addLog(Array.from(arguments).join(' '), 'warning');
+            };
+
+            console.error = function() {
+                originalError.apply(console, arguments);
+                addLog(Array.from(arguments).join(' '), 'error');
+            };
+        })();
+    </script>
+</body>
+</html>
