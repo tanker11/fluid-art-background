@@ -31,10 +31,10 @@
             sim_resolution: 256,
             dye_resolution: 512,
             dissipation: 1,
-            velocity: 1,
-            pressure: 0.9,
+            velocity: 1.0005,
+            pressure: 0.7,
             pressure_iteration: 20,
-            curl: 1,
+            curl: 50,
             emitter_size: 1.0,
             render_shaders: true,
             multi_color: false,
@@ -44,24 +44,24 @@
             intensity: 0.8,
             threshold: 0.6,
             soft_knee: 0.9,
-            background_color: { r: 204, g: 187, b: 173 },
+            background_color: { r: 255, g: 255, b: 255 },
             transparent: false
         },
 
         // Animáció sebesség szabályozás
         animation: {
-            velocityMultiplier: 1.0
+            velocityMultiplier: 1
         },
 
         // Színpaletta (21 szín)
         colors: [
             { r: 5, g: 5, b: 5 },         // 0: Nagyon sötét szürke (pszeudo-fekete)
             { r: 255, g: 255, b: 255 },   // 1: Fehér
-            { r: 204, g: 187, b: 173 },     // 2: Türkiz (cyan)
+            { r: 0, g: 255, b: 255 },     // 2: Türkiz (cyan)
             { r: 0, g: 200, b: 255 },     // 3: Égszínkék
             { r: 0, g: 128, b: 255 },     // 4: Királykék
             { r: 100, g: 150, b: 255 },   // 5: Lágy kék
-            { r: 172, g: 158, b: 146 },    // 6: Élénk lila
+            { r: 204, g: 51, b: 255 },    // 6: Élénk lila
             { r: 180, g: 100, b: 255 },   // 7: Levendula
             { r: 255, g: 0, b: 255 },     // 8: Magenta
             { r: 255, g: 105, b: 180 },   // 9: Rózsaszín (hot pink)
@@ -81,33 +81,76 @@
         // Kezdeti splat-ok konfigurációja
         initialSplats: [
             {
-                colorIndex: 6,           // Élénk lila
-                x: 0.5, y: 0.5,
-                dx: 70, dy: 10,
+                colorIndex: 18,         // Pasztell kék
+                x: 0.2, y: 0.2,
+                dx: 0, dy: 0,
                 radius: 10,
                 delay: 0
             },
             {
-                colorIndex: 2,           // Türkiz
-                x: 0.3, y: 0.5,
-                dx: 50, dy: -20,
+                colorIndex: 4,         // Pasztell kék
+                x: 0.2, y: 0.5,
+                dx: 0, dy: 0,
                 radius: 10,
-                delay: 1200
+                delay: 0
             },
             {
-                colorIndex: 6,           // Élénk lila
-                x: 0.1, y: 0.3,
-                dx: 200, dy: -100,
+                colorIndex: 18,         // Pasztell kék
+                x: 0.2, y: 0.8,
+                dx: 0, dy: 0,
                 radius: 10,
-                delay: 2800
+                delay: 0
             },
             {
-                colorIndex: 11,          // Arany
-                x: 0.1, y: 0.3,
-                dx: 300, dy: 50,
+                colorIndex: 4,         // Pasztell kék
+                x: 0.5, y: 0.2,
+                dx: 0, dy: 0,
                 radius: 10,
-                delay: 5000
+                delay: 0
+            },
+            {
+                colorIndex: 18,         // Pasztell kék
+                x: 0.5, y: 0.5,
+                dx: 0, dy: 0,
+                radius: 10,
+                delay: 0
+            },
+            {
+                colorIndex: 4,         // Pasztell kék
+                x: 0.5, y: 0.8,
+                dx: 0, dy: 0,
+                radius: 10,
+                delay: 0
+            },
+            {
+                colorIndex: 18,         // Pasztell kék
+                x: 0.8, y: 0.2,
+                dx: 0, dy: 0,
+                radius: 10,
+                delay: 0
+            },
+            {
+                colorIndex: 4,         // Pasztell kék
+                x: 0.8, y: 0.5,
+                dx: 0, dy: 0,
+                radius: 10,
+                delay: 0
+            },
+            {
+                colorIndex: 18,         // Pasztell kék
+                x: 0.8, y: 0.8,
+                dx: 0, dy: 0,
+                radius: 10,
+                delay: 0
+            },            
+            {
+                colorIndex: 11,      // Korall
+                x: 0.1, y: 0.9,
+                dx: 400, dy: -200,
+                radius: 4,
+                delay: 1000
             }
+ 
         ]
     };
 
