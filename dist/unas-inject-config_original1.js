@@ -30,11 +30,11 @@
         fluidBehavior: {
             sim_resolution: 256,
             dye_resolution: 512,
-            dissipation: 1,
-            velocity: 1,
-            pressure: 0.9,
+            dissipation: 1.000,
+            velocity: 0.999,
+            pressure: 0.6,
             pressure_iteration: 20,
-            curl: 1,
+            curl: 5,
             emitter_size: 1.0,
             render_shaders: true,
             multi_color: false,
@@ -43,8 +43,8 @@
             bloom_resolution: 256,
             intensity: 0.8,
             threshold: 0.6,
-            soft_knee: 0.9,
-            background_color: { r: 204, g: 187, b: 173 },
+            soft_knee: 0.7,
+            background_color: { r: 0, g: 0, b: 0 },
             transparent: false
         },
 
@@ -57,11 +57,11 @@
         colors: [
             { r: 5, g: 5, b: 5 },         // 0: Nagyon sötét szürke (pszeudo-fekete)
             { r: 255, g: 255, b: 255 },   // 1: Fehér
-            { r: 204, g: 187, b: 173 },     // 2: Türkiz (cyan)
+            { r: 0, g: 255, b: 255 },     // 2: Türkiz (cyan)
             { r: 0, g: 200, b: 255 },     // 3: Égszínkék
             { r: 0, g: 128, b: 255 },     // 4: Királykék
             { r: 100, g: 150, b: 255 },   // 5: Lágy kék
-            { r: 172, g: 158, b: 146 },    // 6: Élénk lila
+            { r: 204, g: 51, b: 255 },    // 6: Élénk lila
             { r: 180, g: 100, b: 255 },   // 7: Levendula
             { r: 255, g: 0, b: 255 },     // 8: Magenta
             { r: 255, g: 105, b: 180 },   // 9: Rózsaszín (hot pink)
@@ -84,28 +84,28 @@
                 colorIndex: 6,           // Élénk lila
                 x: 0.5, y: 0.5,
                 dx: 70, dy: 10,
-                radius: 10,
+                radius: 5.5,
                 delay: 0
             },
             {
                 colorIndex: 2,           // Türkiz
                 x: 0.3, y: 0.5,
                 dx: 50, dy: -20,
-                radius: 10,
+                radius: 5.5,
                 delay: 1200
             },
             {
                 colorIndex: 6,           // Élénk lila
                 x: 0.1, y: 0.3,
                 dx: 200, dy: -100,
-                radius: 10,
+                radius: 6.0,
                 delay: 2800
             },
             {
-                colorIndex: 11,          // Arany
+                colorIndex: 13,          // Arany
                 x: 0.1, y: 0.3,
                 dx: 300, dy: 50,
-                radius: 10,
+                radius: 6.0,
                 delay: 5000
             }
         ]

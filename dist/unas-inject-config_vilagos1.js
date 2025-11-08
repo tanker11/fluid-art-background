@@ -44,7 +44,7 @@
             intensity: 0.8,
             threshold: 0.6,
             soft_knee: 0.9,
-            background_color: { r: 204, g: 187, b: 173 },
+            background_color: { r: 255, g: 255, b: 255 },
             transparent: false
         },
 
@@ -57,11 +57,11 @@
         colors: [
             { r: 5, g: 5, b: 5 },         // 0: Nagyon sötét szürke (pszeudo-fekete)
             { r: 255, g: 255, b: 255 },   // 1: Fehér
-            { r: 204, g: 187, b: 173 },     // 2: Türkiz (cyan)
+            { r: 0, g: 255, b: 255 },     // 2: Türkiz (cyan)
             { r: 0, g: 200, b: 255 },     // 3: Égszínkék
             { r: 0, g: 128, b: 255 },     // 4: Királykék
             { r: 100, g: 150, b: 255 },   // 5: Lágy kék
-            { r: 172, g: 158, b: 146 },    // 6: Élénk lila
+            { r: 204, g: 51, b: 255 },    // 6: Élénk lila
             { r: 180, g: 100, b: 255 },   // 7: Levendula
             { r: 255, g: 0, b: 255 },     // 8: Magenta
             { r: 255, g: 105, b: 180 },   // 9: Rózsaszín (hot pink)
@@ -102,7 +102,7 @@
                 delay: 2800
             },
             {
-                colorIndex: 11,          // Arany
+                colorIndex: 13,          // Arany
                 x: 0.1, y: 0.3,
                 dx: 300, dy: 50,
                 radius: 10,

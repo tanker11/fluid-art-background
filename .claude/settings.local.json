@@ -12,7 +12,8 @@
       "Bash(node -e:*)",
       "Bash(cmd /c \"set NODE_OPTIONS=--openssl-legacy-provider && npm run build\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
